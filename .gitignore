@@ -1,0 +1,17 @@
+# data and model outputs are not distributed with this repository
+data/
+runs/
+*.mat
+*.pt
+*.ckpt
+*.csv
+*.mp4
+*.avi
+
+# editor / OS
+*.asv
+*.autosave
+__pycache__/
+*.pyc
+.DS_Store
+Thumbs.db
