@@ -1,0 +1,20 @@
+{
+  "upload_type": "software",
+  "title": "Personalized kinematic constraint-based drift correction for 3D golf swing trajectory monitoring with a wrist-worn IMU",
+  "version": "1.0.0",
+  "creators": [
+    {
+      "name": "Park, Guen-a",
+      "affiliation": "Korea Advanced Institute of Science and Technology"
+    }
+  ],
+  "description": "MATLAB and Python code for reconstructing the three-dimensional wrist trajectory of a golf swing from a single wrist-worn inertial measurement unit, using a subject-specific kinematic constraint obtained once from monocular video and thereafter inferred from the IMU signals alone.",
+  "keywords": [
+    "inertial measurement unit",
+    "drift correction",
+    "golf swing",
+    "monocular video",
+    "human motion analysis"
+  ],
+  "license": "mit"
+}
