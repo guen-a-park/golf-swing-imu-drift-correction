@@ -1,22 +1,5 @@
 %% path_length_summary_v2.m
-% ============================================================
 % Robust trajectory path length summary (L = sum ||p(t+1)-p(t)||)
-% Entire swing : g.add ~ g.fin
-% Downswing    : g.bst ~ g.imp
-%
-% INPUT (choose ONE format):
-%   (A) Cell format (recommended)
-%       Mtraj_cell{t} : [N x 3] trajectory for trial t
-%       g_cell{t}     : struct with fields add, fin, bst, imp (1-based indices)
-%
-%   (B) 3D array format
-%       Mtraj_all     : [N x 3 x nTrial]
-%       g_all         : struct array with fields add, fin, bst, imp
-%
-% NOTES:
-%   - Indices must be finite scalar numbers. If NaN/empty/out-of-range, that trial is skipped.
-%   - Units: L will follow Mtraj unit (cm in -> cm out, m in -> m out).
-% ============================================================
 
 fprintf('\n============================================================\n');
 fprintf('Trajectory path length summary (L = sum ||p(t+1)-p(t)|| )\n');
@@ -71,7 +54,6 @@ if use_cell
 
         add_check = g.add; fin_check = g.fin; bst_check = g.bst; imp_check = g.imp;
 
-        % --- validate scalar finite ---
         if ~(isnumeric(add_check) && isscalar(add_check) && isfinite(add_check)) || ...
            ~(isnumeric(fin_check) && isscalar(fin_check) && isfinite(fin_check)) || ...
            ~(isnumeric(bst_check) && isscalar(bst_check) && isfinite(bst_check)) || ...
@@ -80,7 +62,6 @@ if use_cell
             continue;
         end
 
-        % --- round to integer and clamp ---
         add_check = round(add_check); fin_check = round(fin_check); bst_check = round(bst_check); imp_check = round(imp_check);
 
         if add_check < 1, add_check = 1; end
@@ -93,7 +74,6 @@ if use_cell
         if bst_check > N, bst_check = N; end
         if imp_check > N, imp_check = N; end
 
-        % --- ensure proper ordering ---
         if fin_check <= add_check
             skip_reason(end+1) = "trial "+t+": fin <= add (add="+add_check+", fin="+fin_check+")";
             continue;
@@ -103,11 +83,9 @@ if use_cell
             continue;
         end
 
-        % Entire swing: add ~ fin
         d = diff(Mtraj(add_check:fin_check, :), 1, 1);
         L_entire_list(t) = sum(sqrt(sum(d.^2, 2)), 'omitnan');
 
-        % Downswing: bst ~ imp
         d = diff(Mtraj(bst_check:imp_check, :), 1, 1);
         L_down_list(t) = sum(sqrt(sum(d.^2, 2)), 'omitnan');
     end

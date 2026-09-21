@@ -1,15 +1,7 @@
 %% [R2-11 / note 53] R2_11_consistency_traj_figure.m
 %  shows consistency with the trajectories themselves rather than with a bar chart. Nothing is averaged;
-%  all 10 trials are drawn for each participant.
-%
-%  Note : the overall size of the wrist trajectory is about 2000 mm while the between-trial band width is 7-18 mm, so
-%         overlaying the raw trajectories makes them look like a single line. Each trial is therefore drawn as
-%         a deviation from that participant's mean trajectory. The mean serves only as a baseline and
-%         the 10 curves remain intact.
-%
 %  Output : results/fig_R2_11_consistency_traj.png / .svg
-%  2026-08-31
-%% ========================================================================
+
 clc; clear; close all;
 
 thisDir = fileparts(mfilename('fullpath'));

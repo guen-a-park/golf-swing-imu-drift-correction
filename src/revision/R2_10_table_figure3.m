@@ -1,18 +1,6 @@
 %% [R2-10] R2_10_table_figure3.m
 %  Figure 3 : builds the corresponding manuscript table.
-%
-%  Puts the two things requested in reviewer comments 10 and 28 into one table.
-%    (1) error-based accuracy metrics : mean absolute error, bias, Bland-Altman limits of agreement
-%    (2) agreement reflecting the repeated-measures structure : intraclass correlation coefficient ICC(C,1) and 95 % confidence interval
-%
-%  All values are computed per participant first, then summarised across participants. ICC is computed on
-%  participant means. The comparison is between the proposed method and MotionAGFormer.
-%
-%  Data   : driver evaluation set, 99 trials
 %  Output : revision/results/R2_10_table_figure3.csv
-%
-%  2026-09-06
-%% ========================================================================
 
 clc; clear; close all;
 thisDir = fileparts(mfilename('fullpath'));
@@ -38,7 +26,6 @@ for nm = {'Proposed','MotionAGFormer'}
         e   = est(:,d) - ref(:,d);
         mae = arrayfun(@(x) mean(abs(e(s==x))), u);
         bi  = arrayfun(@(x) mean(e(s==x)),      u);
-        % Bland-Altman : mean of participant-mean differences +/- 1.96 SD +/- 1.96 SD
         lo  = mean(bi) - 1.96*std(bi);  hi = mean(bi) + 1.96*std(bi);
         a   = arrayfun(@(x) mean(ref(s==x,d)), u);
         b   = arrayfun(@(x) mean(est(s==x,d)), u);
@@ -55,7 +42,7 @@ T = cell2table(rows, 'VariableNames', {'method','axis','MAE','MAE_sd','bias', ..
 writetable(T, fullfile(OUT, 'R2_10_table_figure3.csv'));
 fprintf([NL '* p < 0.05   ** p < 0.01' NL 'saved: results/R2_10_table_figure3.csv' NL]);
 
-%% ===== helper functions =====
+%% helper functions
 function [icc, lo, hi, p] = local_icc(x, y)
     Y = [x(:) y(:)]; [n, k] = size(Y); gm = mean(Y(:));
     MSR = k * sum((mean(Y,2) - gm).^2) / (n-1);

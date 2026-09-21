@@ -1,25 +1,6 @@
 %% [R2-23] R2_23_anthropometry.m
-%  Reviewer 2, Comment R2-23 response
-%  ------------------------------------------------------------------------
-%  Point raised: the observation that the relative wrist displacement D differs across participants may be
-%        naturally expected from anthropometric differences such as arm length and build. This possibility should
-%        be mentioned in the interpretation.
-%
-%  In this study arm length was not measured; only height was recorded.
-%  The correlation between height and D is therefore reported for amateurs (n=10) / pros (n=9) / pooled (n=19),
-%  and the interpretation is written on the basis of whether or not any part is explained by height.
-%
-%  Data
-%    amateur : revision/results/R2_common_mocap_metrics.mat (driver, motion capture D)
-%    pro     : 250819_golf/data/swingData_IMP-3.5+1_20Hz_spline.mat
-%               (subj 12:20, Mwrist, same as draw_figure1_0223.m)
-%
+%  Relation between participant stature and the relative wrist displacement D.
 %  Output : revision/results/R2_23_height_vs_D.csv
-%         revision/results/R2_23_correlation.csv
-%         revision/results/fig_R2_23_height.png/.svg
-%
-%  2026-08-28
-%% ========================================================================
 
 clc; clear; close all;
 set(groot, 'defaultAxesFontSize', 12);
@@ -31,12 +12,12 @@ OUT_DIR = fullfile(thisDir, 'results');
 
 axesName = {'X','Y','Z'};
 
-%% ===== height (cm) =====
+%% height (cm)
 HEIGHT_AMA = [175 170 160 165 160 181 168 176 166 166];   % S01 S02 S03 S04 S05 S06 S07 S08 S09 S10
 HEIGHT_PRO = [173 176 163 176 177 168 172 190 171];       % subj 12~20
 subjN_AMA  = ["S01","S02","S03","S04","S05","S06","S07","S08","S09","S10"];
 
-%% ===== amateur D (motion capture, driver) =====
+%% amateur D (motion capture, driver)
 load(fullfile(OUT_DIR, 'R2_common_mocap_metrics.mat'), 'M');
 Ma = M(M.club == 1, :);
 Dama = nan(10, 3); Dama_sd = nan(10, 3);
@@ -46,8 +27,7 @@ for s = 1:10
     Dama_sd(s,:) = [std(Ma.Dref_x(k)),  std(Ma.Dref_y(k)),  std(Ma.Dref_z(k)) ] / 10;
 end
 
-%% ===== pro D =====
-% draw_figure1_0223.m uses GolfSwing_0424 as the working folder and reads with fullfile('data', ...)
+%% pro D
 proFile = fullfile(fileparts(baseDir), 'GolfSwing_0424', 'data', 'swingData_IMP-3.5+1_20Hz_spline.mat');
 if ~isfile(proFile)
     proFile = fullfile(baseDir, 'data', 'swingData_IMP-3.5+1_20Hz_spline.mat');
@@ -76,7 +56,7 @@ else
     warning('no pro data: %s  (amateurs only)', proFile);
 end
 
-%% ===== save table =====
+%% save table
 grp = [repmat("Amateur",10,1); repmat("Professional",9,1)];
 H   = [HEIGHT_AMA(:); HEIGHT_PRO(:)];
 Dall = [Dama; Dpro];
@@ -86,7 +66,7 @@ Tsub = table(nameAll, grp, H, Dall(:,1), Dall(:,2), Dall(:,3), vecnorm(Dall,2,2)
     'VariableNames', {'subject','group','height_cm','Dx_cm','Dy_cm','Dz_cm','Dnorm_cm'});
 writetable(Tsub, fullfile(OUT_DIR, 'R2_23_height_vs_D.csv'));
 
-%% ===== correlation analysis =====
+%% correlation analysis
 groups = {'Amateur', 'Professional', 'Pooled'};
 masks  = {grp == "Amateur", grp == "Professional", true(19,1)};
 vars   = {'Dx','Dy','Dz','|D|'};
@@ -111,7 +91,6 @@ end
 C = cell2table(crows, 'VariableNames', {'group','variable','R','p','slope','n'});
 writetable(C, fullfile(OUT_DIR, 'R2_23_correlation.csv'));
 
-% partial correlation controlling for the group difference (pooled sample)
 m = all(isfinite([H V]), 2);
 fprintf('\n--- partial correlation after controlling for group (amateur/pro), n = %d ---\n', sum(m));
 gd = double(grp(m) == "Professional");
@@ -120,7 +99,7 @@ for v = 1:4
     fprintf('%-6s R = %6.3f, p = %.4f\n', vars{v}, r, p);
 end
 
-%% ===== figures =====
+%% figures
 figure('Color','w','Position',[100 100 1000 300]);
 for v = 1:3
     subplot(1,3,v); hold on; grid on;

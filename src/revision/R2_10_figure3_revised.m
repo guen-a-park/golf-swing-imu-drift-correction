@@ -1,24 +1,6 @@
 %% [R2-10] R2_10_figure3_revised.m
 %  Redraws Figure 3 so that the repeated-measures structure is visible.
-%
-%  The original figure plotted all participants' trials in one color, so it could not tell whether the linearity
-%  comes from between-participant differences or within-participant variation. That is what comment 10 of Reviewer 2
-%  points at, so the following are changed.
-%
-%    (1) color the points by participant
-%    (2) overlay the participant means as large markers
-%    (3) print the between-participant / within-participant correlation alongside the pooled correlation in each panel
-%
-%  The panel layout is the same as in the manuscript.
-%    A-C : motion capture D  vs  video-based D_Vision
-%    D-F : D_Vision    vs  pooled model D_Infer
-%    G-I : D_Vision    vs  LOSO model D_Infer
-%
 %  Output : revision/results/fig_R2_10_figure3_revised.png / .svg
-%         revision/results/R2_10_figure3_revised.csv
-%
-%  2026-09-06
-%% ========================================================================
 
 clc; clear; close all;
 set(groot, 'defaultAxesFontSize', 11);
@@ -29,8 +11,6 @@ ML  = fullfile(fileparts(fileparts(fileparts(thisDir))), 'multimodal');
 NL  = char(10);
 
 RUN_POOL = fullfile(ML, 'runs_0112_accgyro_400800_ori7traj2');
-% this is the run matching the values printed in panels G-I of manuscript Figure 3 (0.07 / 0.33 / 0.19).
-% verified by comparing the five runs with R2_10_find_loso_run.m.
 RUN_LOSO = fullfile(ML, 'runs_0224_accgyro_400800_loso3');
 
 M = readtable(fullfile(OUT, 'R2_common_mocap_metrics.csv'));
@@ -43,57 +23,53 @@ Dpool = local_load(RUN_POOL, subj, M.trial, false);
 Dloso = local_load(RUN_LOSO, subj, M.trial, true);
 
 u = unique(subj);
-CMAP = lines(numel(u));
-axName = {'X (anteroposterior)', 'Y (mediolateral)', 'Z (vertical)'};
-ROW = { 'Motion capture D (cm)', 'D_{Vision} (cm)', 'D_{Vision} (cm)'; ...
-        'D_{Vision} (cm)',       'D_{Infer} (cm)',  'D_{Infer}, LOSO (cm)' };
+CMAP = R2_participant_colors();   % index by participant number
+axName = {'X (anteroposterior)', 'Y (mediolateral)', 'Z (vertical)'};  % for the log and the csv
+axShort = {'X', 'Y', 'Z'};
+ROW = { 'Measured %s (cm)', 'Proposed Estimated %s (cm)', 'Proposed Estimated %s (cm)'; ...
+        'Proposed Estimated %s (cm)', 'ML Estimated %s (cm)', 'ML Estimated %s (cm)' };
 X = {Dref, Dvid, Dvid};
 Y = {Dvid, Dpool, Dloso};
 PANEL = 'ABCDEFGHI';
 
-fig = figure('Color', 'w', 'Position', [60 40 1150 1000]);
+fig = figure('Color', 'w', 'Units', 'inches', 'Position', [1 1 6.3 6.5]);
+set(fig, 'DefaultAxesFontName', 'Gill Sans MT', 'DefaultTextFontName', 'Gill Sans MT');
 rows = {};
 for r = 1:3
     for d = 1:3
-        ax = subplot(3, 3, (r-1)*3 + d); hold(ax, 'on'); box(ax, 'on');
+        ax = subplot(3, 3, (r-1)*3 + d); hold(ax, 'on'); box(ax, 'off');
+        set(ax, 'FontSize', 7, 'TickDir', 'out', 'LineWidth', 0.6, 'Layer', 'top');
         x = X{r}(:,d); y = Y{r}(:,d);
         ok = isfinite(x) & isfinite(y);
 
-        % (1) trials colored by participant
         for k = 1:numel(u)
             m = ok & subj == u(k);
-            scatter(ax, x(m), y(m), 16, CMAP(k,:), 'filled', 'MarkerFaceAlpha', 0.55);
+            scatter(ax, x(m), y(m), 6, CMAP(u(k),:), 'filled', 'MarkerFaceAlpha', 1);
         end
-        % (2) participant means as large markers
         mx = arrayfun(@(s) mean(x(ok & subj==s)), u);
         my = arrayfun(@(s) mean(y(ok & subj==s)), u);
-        scatter(ax, mx, my, 45, CMAP, 'filled', 'MarkerEdgeColor', 'k', 'LineWidth', 0.6);
 
-        % regression line and y = x
-        p = polyfit(x(ok), y(ok), 1);
-        xl = [min([x(ok); y(ok)]) max([x(ok); y(ok)])];
-        xl = xl + [-1 1] * 0.08 * diff(xl);
-        plot(ax, xl, polyval(p, xl), 'k-', 'LineWidth', 1.2);
-        plot(ax, xl, xl, 'k--', 'LineWidth', 0.8);
-        xlim(ax, xl); ylim(ax, xl);
+        xl = [-30 30];   % the fixed range used in the submitted figure
+        plot(ax, xl, xl, '--', 'Color', [0.6 0.6 0.6], 'LineWidth', 0.6);
+        xlim(ax, xl); ylim(ax, xl); axis(ax, 'square');
+        xticks(ax, -30:10:30); yticks(ax, -30:10:30);
 
-        % (3) the three correlations
         [Rp, Pp] = corr(x(ok), y(ok));
         [Rb, Pb] = corr(mx, my);
         [Rw, Pw] = local_within(x(ok), y(ok), subj(ok));
         [ic, il, ih, ip] = local_icc(mx, my);
         fprintf(['ICC %s %-22s %5.2f [%5.2f, %5.2f] p = %.4f | between %5.2f | within %5.2f' NL], ...
                 PANEL((r-1)*3+d), axName{d}, ic, il, ih, ip, Rb, Rw);
-        text(ax, 0.04, 0.96, sprintf('ICC = %.2f%s', ic, local_star(ip)), ...
-             'Units', 'normalized', 'VerticalAlignment', 'top', ...
-             'FontWeight', 'bold', 'FontSize', 11);
-        text(ax, 0.04, 0.885, sprintf('[%.2f, %.2f]', il, ih), 'Units', 'normalized', ...
-             'VerticalAlignment', 'top', 'FontSize', 9, 'Color', [0.25 0.25 0.25]);
-        text(ax, 0.96, 0.06, sprintf('within r %.2f%s', ...
-             Rw, local_star(Pw)), 'Units', 'normalized', ...
-             'VerticalAlignment', 'bottom', 'HorizontalAlignment', 'right', 'FontSize', 9, 'Color', [0.25 0.25 0.25]);
-        title(ax, sprintf('(%s) %s', PANEL((r-1)*3 + d), axName{d}), 'FontWeight', 'normal');
-        xlabel(ax, ROW{1,r}); ylabel(ax, ROW{2,r});
+        text(ax, 0.05, 0.97, sprintf('ICC = %.2f', ic), 'Units', 'normalized', ...
+             'VerticalAlignment', 'top', 'FontWeight', 'bold', 'FontSize', 7.5);
+        text(ax, 0.05, 0.875, local_ptxt(ip), 'Units', 'normalized', ...
+             'VerticalAlignment', 'top', 'FontSize', 7);
+        text(ax, 0.05, 0.785, sprintf('[%.2f, %.2f]', il, ih), 'Units', 'normalized', ...
+             'VerticalAlignment', 'top', 'FontSize', 6.5, 'Color', [0.35 0.35 0.35]);
+        text(ax, -0.30, 1.14, PANEL((r-1)*3 + d), 'Units', 'normalized', ...
+             'FontWeight', 'bold', 'FontSize', 11, 'VerticalAlignment', 'top');
+        xlabel(ax, sprintf(ROW{1,r}, axShort{d}), 'FontSize', 7.5);
+        ylabel(ax, sprintf(ROW{2,r}, axShort{d}), 'FontSize', 7.5);
         rows = [rows; {PANEL((r-1)*3+d), axName{d}, Rp, Pp, Rb, Pb, Rw, Pw}]; %#ok<AGROW>
     end
 end
@@ -106,7 +82,7 @@ saveas(fig, fullfile(OUT, 'fig_R2_10_figure3_revised.svg'));
 disp(T);
 fprintf([NL 'saved: results/fig_R2_10_figure3_revised.png' NL]);
 
-%% ===== Helper functions =====
+%% local functions
 function D = local_load(runDir, subj, trial, isLoso)
     D = nan(numel(subj), 3);
     for su = unique(subj)'
@@ -151,4 +127,8 @@ function [icc, lo, hi, p] = local_icc(x, y)
     p = 1 - fcdf(F, df1, df2);
     fL = F / finv(0.975, df1, df2); fU = F * finv(0.975, df2, df1);
     lo = (fL - 1) / (fL + k - 1); hi = (fU - 1) / (fU + k - 1);
+end
+
+function s = local_ptxt(p)
+if p < 0.001, s = 'p < 0.001'; else, s = sprintf('p = %.3f', p); end
 end

@@ -1,29 +1,6 @@
 %% [R2-10] R2_10_statistics.m
-%  Reviewer 2, Comment R2-10 response
-%  ------------------------------------------------------------------------
-%  Comment (1) Pearson correlation is linearity, not accuracy. Accuracy must be reported with MAE/RMSE/bias/
-%           Bland-Altman and other error-based metrics.
-%       (2) Each participant has several swings, so observations are not independent. Trial-level
-%           pooled correlation and t-tests overestimate significance.
-%
-%  Contents
-%    Part A. Figure 3 (video-based D estimation) re-analysis
-%            - pooled Pearson R (reproduces the manuscript value)
-%            - Fisher-z mean of per-participant R
-%            - repeated-measures correlation (correlation after removing participant means)
-%            - linear mixed model  pred ~ meas + (1|subj)
-%            - per-axis MAE / RMSE / bias / Bland-Altman LoA
-%    Part B. Hotelling-Williams test (comparison of two correlation coefficients from the same sample)
-%    Part C. Welch's t-test against prior work (Kim & Park 2024) (based on summary statistics)
-%
-%  Prerequisite : R2_common_mocap_extract.m
+%  Error-based accuracy metrics and repeated-measures statistics for Figure 3.
 %  Output       : revision/results/R2_10_figure3_accuracy.csv
-%              revision/results/R2_10_correlation_methods.csv
-%              revision/results/R2_10_welch_prior_study.csv
-%              revision/results/fig_R2_10_blandaltman.png/.svg
-%
-%  2026-08-28
-%% ========================================================================
 
 clc; clear; close all;
 set(groot, 'defaultAxesFontSize', 12);
@@ -35,9 +12,7 @@ load(fullfile(OUT_DIR, 'R2_common_mocap_metrics.mat'), 'M');
 
 axesName = {'X','Y','Z'};
 
-%% ========================================================================
 %% Part A. Figure 3A-C : motion capture D vs video-based D_Vision
-%% ========================================================================
 Msel = M(M.club == 1, :);                                  % driver
 meas = [Msel.Dref_x, Msel.Dref_y, Msel.Dref_z] / 10;       % mm -> cm
 pred = [Msel.Dvid_x, Msel.Dvid_y, Msel.Dvid_z] / 10;
@@ -50,10 +25,8 @@ accRows = {}; corRows = {};
 for d = 1:3
     x = meas(:,d); y = pred(:,d);
 
-    % --- (1) pooled Pearson (manuscript method) ---
     [r_pool, p_pool] = corr(x, y, 'Type', 'Pearson');
 
-    % --- (2) per-participant R -> Fisher z mean ---
     rs = nan(nS,1); ns = nan(nS,1);
     for si = 1:nS
         k = subj == subjList(si);
@@ -69,7 +42,6 @@ for d = 1:3
     se_z     = 1/sqrt(sum(w));
     ci_fisher = tanh([sum(w.*z)/sum(w) - 1.96*se_z, sum(w.*z)/sum(w) + 1.96*se_z]);
 
-    % --- (3) repeated-measures correlation (participant means removed) ---
     xc = x; yc = y;
     for si = 1:nS
         k = subj == subjList(si);
@@ -81,7 +53,6 @@ for d = 1:3
     t_rm = r_rm * sqrt(df_rm / max(1 - r_rm^2, eps));
     p_rm = 2 * (1 - tcdf(abs(t_rm), df_rm));
 
-    % --- (4) linear mixed model ---
     tbl = table(y, x, categorical(subj), 'VariableNames', {'pred','meas','subj'});
     lme = fitlme(tbl, 'pred ~ meas + (1|subj)');
     ci  = coefCI(lme);
@@ -92,7 +63,6 @@ for d = 1:3
     corRows(end+1,:) = {axesName{d}, r_pool, p_pool, r_fisher, ci_fisher(1), ci_fisher(2), ...
         r_rm, p_rm, df_rm, slope, slope_ci(1), slope_ci(2), p_lme, nS, numel(x)}; %#ok<SAGROW>
 
-    % --- (5) error-based accuracy metrics ---
     e = y - x;                                             % bias sign kept
     sm = nan(nS,1); sa = nan(nS,1); sr = nan(nS,1);
     for si = 1:nS
@@ -136,7 +106,7 @@ for r = 1:height(Tacc)
         Tacc.LoA_lower(r), Tacc.LoA_upper(r));
 end
 
-%% ----- Bland-Altman figure -----
+%% Bland-Altman figure
 figure('Color','w','Position',[100 100 1000 320]);
 for d = 1:3
     subplot(1,3,d); hold on; grid on;
@@ -158,16 +128,7 @@ end
 exportgraphics(gcf, fullfile(OUT_DIR, 'fig_R2_10_blandaltman.png'), 'Resolution', 300);
 saveas(gcf, fullfile(OUT_DIR, 'fig_R2_10_blandaltman.svg'));
 
-%% ========================================================================
 %% Part B. Hotelling-Williams test
-%% ========================================================================
-%  Compares two correlation coefficients obtained from the same sample.
-%    r12 : correlation of reference (measured) with method 1   (e.g. mocap vs proposed video-based)
-%    r13 : correlation of reference (measured) with method 2   (e.g. mocap vs MotionAGFormer): mocap vs MotionAGFormer)
-%    r23 : correlation between the two methods    <- not in the manuscript. required.
-%
-%  R23 below requires MotionAGFormer estimates, so fill it in if available
-%  and leave it as NaN otherwise; that axis is then skipped.
 HW = struct();
 HW.n   = numel(x);                                  % number of trials (pooled basis)
 HW.r12 = [0.72 0.63 0.82];                          % proposed video-based (manuscript Fig 3A-C) Fig 3A-C)
@@ -190,20 +151,13 @@ end
 fprintf('\nNote: using the number of trials as n overestimates significance because of the repeated-measures structure.\n');
 fprintf('      To report at participant level, set n = number of participants (%d) and interpret conservatively.\n', nS);
 
-%% ========================================================================
 %% Part C. Welch's t-test against prior work Kim & Park (2024) Welch's t-test
-%% ========================================================================
-%  Comparison with prior work reporting only summary statistics, so the repeated-measures structure cannot be reflected.
-%  This study uses participant-level aggregates (n = 10); the prior work uses its reported n = 20.
-%  [name, mean1, sd1, n1, mean2, sd2, n2]
 CMP = {
- % --- orientation error (deg) : this study uses the participant-level values from R2_09 Part 3 ---
   'Orientation ADD',   11.00, 4.00, 10,   7.6, 3.1, 20;
   'Orientation BST',   10.70, 3.24, 10,   8.5, 3.3, 20;
   'Orientation IMP',   29.04, 8.28, 10,  14.1, 4.5, 20;
   'Orientation FIN',   16.25,11.58, 10,  11.1, 5.9, 20;
   'Orientation ALL',   13.75, 3.83, 10,   9.5, 3.2, 20;
- % --- trajectory error (cm) : manuscript Table 3 Table 3 ---
   'Traj Backswing',    14.13, 4.06, 10,  11.2, 4.2, 20;
   'Traj Downswing',    15.13, 5.55, 10,  26.6,12.3, 20;
   'Traj Followthrough',32.56,19.18, 10,  34.3,14.0, 20;
@@ -226,11 +180,8 @@ fprintf('saved: %s\n', fullfile(OUT_DIR, 'R2_10_figure3_accuracy.csv'));
 fprintf('saved: %s\n', fullfile(OUT_DIR, 'R2_10_welch_prior_study.csv'));
 fprintf('saved: %s\n', fullfile(OUT_DIR, 'fig_R2_10_blandaltman.png'));
 
-
-%% ===== functions =====
+%% functions
 function [t, p, df] = hotelling_williams(r12, r13, r23, n)
-% Test of the difference between two correlations r12, r13 sharing common variable 1 in the same sample
-% (Williams 1959; Steiger 1980 t2 statistic)
     R  = 1 - r12^2 - r13^2 - r23^2 + 2*r12*r13*r23;      % determinant of the correlation matrix
     rb = (r12 + r13) / 2;
     df = n - 3;
@@ -241,7 +192,6 @@ function [t, p, df] = hotelling_williams(r12, r13, r23, n)
 end
 
 function [t, p, df] = welch_ttest(m1, s1, n1, m2, s2, n2)
-% Welch's t-test from summary statistics (no equal-variance assumption)
     se2 = s1^2/n1 + s2^2/n2;
     t   = (m1 - m2) / sqrt(se2);
     df  = se2^2 / ( (s1^2/n1)^2/(n1-1) + (s2^2/n2)^2/(n2-1) );

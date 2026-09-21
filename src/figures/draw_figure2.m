@@ -1,7 +1,5 @@
 %% General model vs personal model comparison analysis
 % ml_traj_check (mae_method=6) based MAE comparison and statistical test
-% 
-% required file: load_ml_data.m (must be in the same folder)
 
 clc; clear all; close all;
 set(groot,'defaultAxesFontSize',20);
@@ -16,14 +14,12 @@ time = 0.005:0.005:4.5;
 time = time';
 ts = 0.005;
 
-% color definitions
 dark_green = [59 115 54]/255;
 dark_red   = [170 44 40]/255;
 dark_purple = [102 51 153]/255;
 soft_purple = [0.749, 0.502, 0.749];
 pink = [255,164,179]/255;
 
-% colors per model
 color_general = [40 40 120]/255;      % General model - dark navy 
 
 color_personal = [0, 127, 255]/255;   % Personal model - bright blue
@@ -33,11 +29,9 @@ OrientationMethod = 7;
 mae_method = 6;  % use ml_traj_check
 mae_method_vel = 0;
 
-%% ===== folder path settings =====
-% general model (trained on all participants)
+%% folder path settings
 mldataDir_general = fullfile(runsRoot(), 'runs_1218_accgyro_350800_ori0traj_3');
 
-% personal model (trained per participant) - per-participant folder
 mldataDir_personal = {
     fullfile(runsRoot(), 'runs_1218_accgyro_350800_ori0traj_expt1_5');
     fullfile(runsRoot(), 'runs_1218_accgyro_350800_ori0traj_expt2_5');
@@ -56,20 +50,17 @@ clubs_ml = {'driver','iron','fast'};
 nRows_ml = 10; nCols_ml = 3;
 nTrials = 10;
 
-% ML trajectory ↔ Reference frame mapping
-% ML: 1~450 → Reference: 350~800 (i.e. ml_idx + 349 = ref_idx)
 ml_start_ref = 351;  % frame 1 of ML corresponds to frame 350 of the reference
 ml_end_ref = 800;    % frame 450 of ML corresponds to frame 800 of the reference (799 in practice)
 
-% plot x-axis range
 plot_x_start = 320;
 plot_x_end = 850;
 
-%% ===== load general model data =====
+%% load general model data
 fprintf('Loading general model data...\n');
 [ml_est_general, ml_traj_est_general] = load_ml_data(mldataDir_general, clubs_ml, nRows_ml, nCols_ml, nTrials, nSubj_ml, []);
 
-%% ===== load personal model data =====
+%% load personal model data
 fprintf('Loading personal model data...\n');
 ml_est_personal = struct();
 ml_traj_est_personal = struct();
@@ -81,15 +72,13 @@ end
 for subj = 1:nSubj_ml
     [ml_est_temp, ml_traj_est_temp] = load_ml_data(mldataDir_personal{subj}, clubs_ml, nRows_ml, nCols_ml, nTrials, nSubj_ml, subj);
     
-    % copy only this participant's data
     for c = 1:numel(clubs_ml)
         ml_est_personal.(clubs_ml{c})(:,:,subj) = ml_est_temp.(clubs_ml{c})(:,:,subj);
         ml_traj_est_personal.(clubs_ml{c})(:,subj) = ml_traj_est_temp.(clubs_ml{c})(:,subj);
     end
 end
 
-%% ===== MAE computation =====
-% result storage variables
+%% MAE computation
 mae_list_general = [];
 mae_list_personal = [];
 mae_norm_list_general = [];
@@ -97,14 +86,12 @@ mae_norm_list_personal = [];
 subj_id_list = [];
 trial_id_list = [];
 
-% store data for plotting (on the reference frame basis)
 max_trials_per_subj = 10;
 max_frames = 900;
 plot_ds_ref_all = nan(max_frames, 3, max_trials_per_subj, nSubj_ml);        % full reference
 plot_ds_ml_general_all = nan(max_frames, 3, max_trials_per_subj, nSubj_ml); % general model (on ref frames)
 plot_ds_ml_personal_all = nan(max_frames, 3, max_trials_per_subj, nSubj_ml);% personal model (on ref frames)
 
-% store swing events (g.add, g.bst, g.imp, g.fin)
 event_add_all = nan(max_trials_per_subj, nSubj_ml);
 event_bst_all = nan(max_trials_per_subj, nSubj_ml);
 event_imp_all = nan(max_trials_per_subj, nSubj_ml);
@@ -117,10 +104,7 @@ for subj = 1:nSubj_ml
     club = 1;  % driver only
     
     for trial = 21:30  % normal shot only
-        % exception handling
-        if subj==1 && club==2 && trial==1
-            continue
-        elseif subj==5 && club==3 && trial==5
+        if subj==5 && club==3 && trial==5
             continue
         elseif subj==8 && club==1 && trial==30
             continue
@@ -137,40 +121,31 @@ for subj = 1:nSubj_ml
             g.fin = 900;
         end
         
-        % marker data
         WristU = g.marker(:,13:15);
         WristL = g.marker(:,7:9);
         abs_wrist = (WristU + WristL) ./ 2;
         
-        % Reference trajectory (marker based, coordinates relative to the address instant)
         Mtraj = abs_wrist - abs_wrist(g.add,:);
         
-        % fetch ML trajectory
         ml_traj_general = ml_traj_est_general.(clubs_ml{club}){trial-20, subj};
         ml_traj_personal = ml_traj_est_personal.(clubs_ml{club}){trial-20, subj};
         
-        % data validity check
         if isempty(ml_traj_general) || isempty(ml_traj_personal)
             fprintf('  [WARN] Subject %d, Trial %d: ML data missing. Skip.\n', subj, trial);
             continue
         end
         
-        % ML trajectory length
         traj_len = size(ml_traj_general, 1);  % usually 450
         
-        % MAE computation: whole ML range (1~450) vs Reference (350~800)
-        % index i of ML = index (349+i) of Reference
         eval_len = min(traj_len, ml_end_ref - ml_start_ref + 1);
         
         ref_start_idx = ml_start_ref;  % 350
         ref_end_idx = ml_start_ref + eval_len - 1;  % 799 (450 samples)
         
-        % extract Reference range (350~799)
         ref_segment = Mtraj(ref_start_idx:ref_end_idx, :);
         ml_general_segment = ml_traj_general(1:eval_len, :);
         ml_personal_segment = ml_traj_personal(1:eval_len, :);
         
-        % MAE computation
         error_general = ref_segment - ml_general_segment;
         error_personal = ref_segment - ml_personal_segment;
         
@@ -179,7 +154,6 @@ for subj = 1:nSubj_ml
         mae_norm_general = mean(vecnorm(error_general, 2, 2));
         mae_norm_personal = mean(vecnorm(error_personal, 2, 2));
         
-        % store results
         mae_list_general = [mae_list_general; mae_xyz_general];
         mae_list_personal = [mae_list_personal; mae_xyz_personal];
         mae_norm_list_general = [mae_norm_list_general; mae_norm_general];
@@ -187,16 +161,12 @@ for subj = 1:nSubj_ml
         subj_id_list = [subj_id_list; subj];
         trial_id_list = [trial_id_list; trial];
         
-        % store data for plotting (reference frame basis)
         plot_ds_ref_all(:, :, z, subj) = Mtraj;
         
-        % store the ML trajectory aligned to the Reference frames
-        % ML 1:traj_len → Reference ml_start_ref : (ml_start_ref + traj_len - 1)
         ml_ref_indices = ml_start_ref : (ml_start_ref + traj_len - 1);
         plot_ds_ml_general_all(ml_ref_indices, :, z, subj) = ml_traj_general;
         plot_ds_ml_personal_all(ml_ref_indices, :, z, subj) = ml_traj_personal;
         
-        % store swing events
         event_add_all(z, subj) = g.add;
         event_bst_all(z, subj) = g.bst;
         event_imp_all(z, subj) = g.imp;
@@ -208,7 +178,6 @@ for subj = 1:nSubj_ml
     fprintf('Subject %d: %d trials processed\n', subj, z-1);
 end
 
-% convert to cm
 mae_list_general = mae_list_general.*0.1;
 mae_list_personal = mae_list_personal.*0.1;
 mae_norm_list_general = mae_norm_list_general.*0.1;
@@ -218,7 +187,7 @@ plot_ds_ref_all = plot_ds_ref_all.*0.1;
 plot_ds_ml_general_all = plot_ds_ml_general_all.*0.1;
 plot_ds_ml_personal_all = plot_ds_ml_personal_all.*0.1;
 
-%% ===== per-participant MAE summary =====
+%% per-participant MAE summary
 fprintf('\n========== Per-participant MAE summary ==========\n');
 fprintf('%-6s | %-20s | %-20s | %-10s\n', 'Subj', 'General (mean±std)', 'Personal (mean±std)', 'Diff');
 fprintf('%s\n', repmat('-', 1, 70));
@@ -248,7 +217,7 @@ for subj = 1:nSubj_ml
         subj, mean(mae_g), std(mae_g), mean(mae_p), std(mae_p), diff_pct);
 end
 
-%% ===== overall statistics summary =====
+%% overall statistics summary
 fprintf('\n========== Overall MAE statistics ==========\n');
 fprintf('General model (General):\n');
 fprintf('  MAE norm: %.2f ± %.2f cm\n', mean(mae_norm_list_general), std(mae_norm_list_general));
@@ -262,10 +231,9 @@ fprintf('  MAE X: %.2f ± %.2f cm\n', mean(mae_list_personal(:,1)), std(mae_list
 fprintf('  MAE Y: %.2f ± %.2f cm\n', mean(mae_list_personal(:,2)), std(mae_list_personal(:,2)));
 fprintf('  MAE Z: %.2f ± %.2f cm\n', mean(mae_list_personal(:,3)), std(mae_list_personal(:,3)));
 
-%% ===== statistical significance test =====
+%% statistical significance test
 fprintf('\n========== Statistical significance test ==========\n');
 
-% trial-level paired comparison
 fprintf('\n[1] Trial-level Paired Comparison (N=%d trials)\n', length(mae_norm_list_general));
 result_trial = compare_methods_local(mae_list_general, mae_list_personal, ...
     'Name', 'General vs Personal (Trial-level)', ...
@@ -275,7 +243,6 @@ result_trial = compare_methods_local(mae_list_general, mae_list_personal, ...
 
 print_stat_result(result_trial);
 
-% aggregate to per-participant means, then compare
 fprintf('\n[2] Paired Comparison after per-participant mean aggregation (N=%d subjects)\n', nSubj_ml);
 result_subj = compare_methods_local(mae_list_general, mae_list_personal, ...
     'Name', 'General vs Personal (Subject-level)', ...
@@ -287,24 +254,20 @@ result_subj = compare_methods_local(mae_list_general, mae_list_personal, ...
 
 print_stat_result(result_subj);
 
-%% ===== Figure 4: mean Trajectory comparison over all Trials of one participant (3x1 subplot) =====
+%% Figure 4: mean Trajectory comparison over all Trials of one participant (3x1 subplot)
 subj_plot = 1;  % participant number to plot (change to the desired participant)
 
-% check the number of valid trials for this participant
 n_trials_subj = sum(~isnan(squeeze(plot_ds_ref_all(1,1,:,subj_plot))));
 
-% extract data [frames x 3 x trials]
 ref_data = squeeze(plot_ds_ref_all(:,:,1:n_trials_subj, subj_plot));      % [900 x 3 x n_trials]
 ml_general_data = squeeze(plot_ds_ml_general_all(:,:,1:n_trials_subj, subj_plot));
 ml_personal_data = squeeze(plot_ds_ml_personal_all(:,:,1:n_trials_subj, subj_plot));
 
-% extract swing events
 events_add = event_add_all(1:n_trials_subj, subj_plot);
 events_bst = event_bst_all(1:n_trials_subj, subj_plot);
 events_imp = event_imp_all(1:n_trials_subj, subj_plot);
 events_fin = event_fin_all(1:n_trials_subj, subj_plot);
 
-% event mean and standard deviation
 event_add_mean = mean(events_add, 'omitnan');
 event_add_std = std(events_add, 0, 'omitnan');
 event_bst_mean = mean(events_bst, 'omitnan');
@@ -314,7 +277,6 @@ event_imp_std = std(events_imp, 0, 'omitnan');
 event_fin_mean = mean(events_fin, 'omitnan');
 event_fin_std = std(events_fin, 0, 'omitnan');
 
-% compute mean and standard deviation
 ref_mean = mean(ref_data, 3, 'omitnan');           % [900 x 3]
 ref_std = std(ref_data, 0, 3, 'omitnan');
 ml_general_mean = mean(ml_general_data, 3, 'omitnan');
@@ -322,7 +284,6 @@ ml_general_std = std(ml_general_data, 0, 3, 'omitnan');
 ml_personal_mean = mean(ml_personal_data, 3, 'omitnan');
 ml_personal_std = std(ml_personal_data, 0, 3, 'omitnan');
 
-% x-axis (frames)
 x_frames = (plot_x_start:plot_x_end)';
 
 figure('Position', [100,349,600,551]);
@@ -332,59 +293,49 @@ for k = 1:3
     subplot(3,1,k);
     hold on;
     
-    % compute the y-axis range first (to draw the event shading)
     ref_plot_data = ref_mean(plot_x_start:plot_x_end, k);
     y_min = min(ref_plot_data) - 10;
     y_max = max(ref_plot_data) + 10;
     
-    % event vertical lines (light gray, with shading) - drawn first so they stay behind
     event_color = [0.8 0.8 0.8];
     event_alpha = 0.3;
     
-    % ADD
     fill([event_add_mean - event_add_std, event_add_mean + event_add_std, ...
           event_add_mean + event_add_std, event_add_mean - event_add_std], ...
          [y_min, y_min, y_max, y_max], ...
          event_color, 'EdgeColor', 'none', 'FaceAlpha', event_alpha, 'HandleVisibility', 'off');
     xline(event_add_mean, '--', 'Color', [0.6 0.6 0.6], 'LineWidth', 1, 'HandleVisibility', 'off');
     
-    % BST
     fill([event_bst_mean - event_bst_std, event_bst_mean + event_bst_std, ...
           event_bst_mean + event_bst_std, event_bst_mean - event_bst_std], ...
          [y_min, y_min, y_max, y_max], ...
          event_color, 'EdgeColor', 'none', 'FaceAlpha', event_alpha, 'HandleVisibility', 'off');
     xline(event_bst_mean, '--', 'Color', [0.6 0.6 0.6], 'LineWidth', 1, 'HandleVisibility', 'off');
     
-    % IMP
     fill([event_imp_mean - event_imp_std, event_imp_mean + event_imp_std, ...
           event_imp_mean + event_imp_std, event_imp_mean - event_imp_std], ...
          [y_min, y_min, y_max, y_max], ...
          event_color, 'EdgeColor', 'none', 'FaceAlpha', event_alpha, 'HandleVisibility', 'off');
     xline(event_imp_mean, '--', 'Color', [0.6 0.6 0.6], 'LineWidth', 1, 'HandleVisibility', 'off');
     
-    % FIN
     fill([event_fin_mean - event_fin_std, event_fin_mean + event_fin_std, ...
           event_fin_mean + event_fin_std, event_fin_mean - event_fin_std], ...
          [y_min, y_min, y_max, y_max], ...
          event_color, 'EdgeColor', 'none', 'FaceAlpha', event_alpha, 'HandleVisibility', 'off');
     xline(event_fin_mean, '--', 'Color', [0.6 0.6 0.6], 'LineWidth', 1, 'HandleVisibility', 'off');
     
-    % ML range boundaries (350, 800)
     xline(ml_start_ref, 'k-', 'LineWidth', 1.2, 'HandleVisibility', 'off');
     xline(ml_end_ref, 'k-', 'LineWidth', 1.2, 'HandleVisibility', 'off');
 
-    % Reference shade
     ref_upper = ref_mean(plot_x_start:plot_x_end, k) + ref_std(plot_x_start:plot_x_end, k);
     ref_lower = ref_mean(plot_x_start:plot_x_end, k) - ref_std(plot_x_start:plot_x_end, k);
     fill([x_frames; flipud(x_frames)], [ref_upper; flipud(ref_lower)], ...
          color_ref, 'EdgeColor', 'none', 'FaceAlpha', 0.15, 'HandleVisibility', 'off');
     
-    % General model shade (350~800 range only)
     ml_valid_idx = ml_start_ref:ml_end_ref;
     ml_x = ml_valid_idx';
     ml_gen_upper = ml_general_mean(ml_valid_idx, k) + ml_general_std(ml_valid_idx, k);
     ml_gen_lower = ml_general_mean(ml_valid_idx, k) - ml_general_std(ml_valid_idx, k);
-    % remove NaN
     valid_gen = ~isnan(ml_gen_upper) & ~isnan(ml_gen_lower);
     if any(valid_gen)
         fill([ml_x(valid_gen); flipud(ml_x(valid_gen))], ...
@@ -392,7 +343,6 @@ for k = 1:3
              color_general, 'EdgeColor', 'none', 'FaceAlpha', 0.2, 'HandleVisibility', 'off');
     end
     
-    % Personal model shade (350~800 range only)
     ml_pers_upper = ml_personal_mean(ml_valid_idx, k) + ml_personal_std(ml_valid_idx, k);
     ml_pers_lower = ml_personal_mean(ml_valid_idx, k) - ml_personal_std(ml_valid_idx, k);
     valid_pers = ~isnan(ml_pers_upper) & ~isnan(ml_pers_lower);
@@ -402,54 +352,40 @@ for k = 1:3
              color_personal, 'EdgeColor', 'none', 'FaceAlpha', 0.2, 'HandleVisibility', 'off');
     end
     
-    % Mean lines
     plot(x_frames, ref_mean(plot_x_start:plot_x_end, k), '-', ...
          'Color', color_ref, 'LineWidth', 2, 'DisplayName', 'Reference');
     
-    % General model mean (350~800 only)
     valid_gen_mean = ~isnan(ml_general_mean(ml_valid_idx, k));
     plot(ml_x(valid_gen_mean), ml_general_mean(ml_valid_idx(valid_gen_mean), k), '-', ...
          'Color', color_general, 'LineWidth', 1.5, 'DisplayName', 'General Model');
     
-    % Personal model mean (350~800 only)
     valid_pers_mean = ~isnan(ml_personal_mean(ml_valid_idx, k));
     plot(ml_x(valid_pers_mean), ml_personal_mean(ml_valid_idx(valid_pers_mean), k), '-', ...
          'Color', color_personal, 'LineWidth', 1.5, 'DisplayName', 'Personal Model');
     
     xlim([plot_x_start plot_x_end]);
     ylim([y_min y_max]);
-    % ylabel(sprintf('%s (cm)', axis_labels{k}));
     
-    % if k == 3
-    %     xlabel('Frame');
-    % end
     
-    % if k == 1
-    %     legend('Location', 'best');
-    % end
     
-    % grid on;
     hold off;
 end
 
-%% ===== Figure 5: 3D Trajectory comparison (participant mean) =====
+%% Figure 5: 3D Trajectory comparison (participant mean)
 figure('Position', [100, 100, 800, 600]);
 hold on;
 
-% Reference (only the plot range of the whole record)
 plot3(ref_mean(plot_x_start:800, 1), ...
       ref_mean(plot_x_start:800, 2), ...
       ref_mean(plot_x_start:800, 3), ...
       '-', 'Color', color_ref, 'LineWidth', 2, 'DisplayName', 'Reference');
 
-% General model (350~800 only)
 valid_gen_3d = ~isnan(ml_general_mean(ml_valid_idx, 1));
 plot3(ml_general_mean(ml_valid_idx(valid_gen_3d)-2, 1), ...
       ml_general_mean(ml_valid_idx(valid_gen_3d)-2, 2), ...
       ml_general_mean(ml_valid_idx(valid_gen_3d)-2, 3), ...
       '-', 'Color', color_general, 'LineWidth', 1.5, 'DisplayName', 'General Model');
 
-% Personal model (350~800 only)
 valid_pers_3d = ~isnan(ml_personal_mean(ml_valid_idx, 1));
 plot3(ml_personal_mean(ml_valid_idx(valid_pers_3d)-10, 1), ...
       ml_personal_mean(ml_valid_idx(valid_pers_3d)-10, 2), ...
@@ -457,13 +393,11 @@ plot3(ml_personal_mean(ml_valid_idx(valid_pers_3d)-10, 1), ...
       '-', 'Color', color_personal, 'LineWidth', 1.5, 'DisplayName', 'Personal Model');
 
 xlabel('X (cm)'); ylabel('Y (cm)'); zlabel('Z (cm)');
-% legend('Location', 'best');
-% grid on;
 axis equal;
 view(3);
 hold off;
 
-%% ===== save results =====
+%% save results
 results = struct();
 results.mae_list_general = mae_list_general;
 results.mae_list_personal = mae_list_personal;
@@ -487,10 +421,6 @@ results.event_fin = event_fin_all;
 
 save('general_vs_personal_model_comparison.mat', 'results');
 fprintf('\nResults saved to general_vs_personal_model_comparison.mat.\n');
-
-%% ========================================================================
-%                         LOCAL FUNCTIONS
-%% ========================================================================
 
 function print_stat_result(result)
     if isfield(result, 'mag')

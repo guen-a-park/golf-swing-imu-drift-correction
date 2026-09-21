@@ -1,18 +1,6 @@
 %% [R2-11] R2_11_figure6d_revised.m
 %  Redraws Figure 6D so that the repeated-measures structure is visible.
-%
-%  The existing figure plotted every participant's trials in one colour and presented them as "across all participants and
-%  trials". It has the same structure that drew criticism for Figure 3, so it is fixed in the same way.
-%
-%    (1) colour the points by participant
-%    (2) overlay the participant means as large markers
-%    (3) give the intraclass correlation coefficient and its confidence interval as the headline numbers, together with the within-participant correlation
-%
-%  Prerequisite : R2_11_agreement_within.m (results/R2_11_agreement_within.csv)
 %  Output      : revision/results/fig_R2_11_figure6d_revised.png / .svg
-%
-%  2026-09-06
-%% ========================================================================
 
 clc; clear; close all;
 set(groot, 'defaultAxesFontSize', 12);
@@ -23,18 +11,17 @@ NL  = char(10);
 
 A = readtable(fullfile(OUT, 'R2_11_agreement_within.csv'));
 s = A.subj; x = A.agree_mocap; y = A.agree_est;
-u = unique(s); CMAP = lines(numel(u));
+u = unique(s); CMAP = R2_participant_colors();   % index by participant number
 
 fig = figure('Color', 'w', 'Position', [200 200 560 520]);
 ax = axes(fig); hold(ax, 'on'); box(ax, 'on');
 
 for k = 1:numel(u)
     m = s == u(k);
-    scatter(ax, x(m), y(m), 26, CMAP(k,:), 'filled', 'MarkerFaceAlpha', 0.55);
+    scatter(ax, x(m), y(m), 26, CMAP(u(k),:), 'filled', 'MarkerFaceAlpha', 1);
 end
 mx = arrayfun(@(v) mean(x(s==v)), u);
 my = arrayfun(@(v) mean(y(s==v)), u);
-scatter(ax, mx, my, 130, CMAP, 'filled', 'MarkerEdgeColor', 'k', 'LineWidth', 0.9);
 
 p  = polyfit(x, y, 1);
 xl = [0 100];
@@ -63,7 +50,7 @@ exportgraphics(fig, fullfile(OUT, 'fig_R2_11_figure6d_revised.png'), 'Resolution
 saveas(fig, fullfile(OUT, 'fig_R2_11_figure6d_revised.svg'));
 fprintf([NL 'saved: results/fig_R2_11_figure6d_revised.png' NL]);
 
-%% ===== helper functions =====
+%% helper functions
 function [icc, lo, hi, p] = local_icc(x, y)
     Y = [x(:) y(:)]; [n, k] = size(Y); gm = mean(Y(:));
     MSR = k * sum((mean(Y,2) - gm).^2) / (n-1);

@@ -1,16 +1,6 @@
 %% [R2-9] R2_09_exclusion_impact.m
 %  checks how the manuscript numbers change when the saturated trials are excluded entirely.
-%  only the items that do not require retraining the model are computed first.
-%
-%    (1) Table 1  : between-participant mean and within-participant variation of the motion capture D
-%    (2) Figure 3A-C : per-axis correlation between the mocap D and the video D
-%    (3) per-axis error and 3D magnitude of the video D
-%    (4) trajectory error per phase (video D correction)
-%
 %  Output : revision/results/R2_09_exclusion_impact.csv
-%
-%  2026-09-05
-%% ========================================================================
 
 clc; clear; close all;
 
@@ -25,7 +15,6 @@ load(fullfile(RES, 'R2_03_traj_store_ori7.mat'), 'R2_03_store'); S = R2_03_store
 TW = TW(strcmp(string(TW.clubName), "driver"), :);
 Md = M(M.club == 1 & M.trial >= 21 & M.trial <= 30, :);
 
-% whether each evaluation trial is saturated
 sat = false(height(Md),1);
 for k = 1:height(Md)
     t = TW(TW.subj == Md.subj(k) & TW.trial == Md.trial(k), :);
@@ -34,7 +23,7 @@ end
 NL = char(10);
 fprintf([NL 'among %d evaluation trials, %d are saturated' NL], height(Md), sum(sat));
 
-%% ===== (1) motion capture D =====
+%% (1) motion capture D
 fprintf([NL '===== (1) motion capture D (cm) =====' NL]);
 fprintf(['%-14s %18s %18s' NL], 'item', 'all', 'excl. saturated');
 lbl = {'fore-aft X','left-right Y','up-down Z'};
@@ -52,7 +41,7 @@ for a = 1:3
         mean(v1), std(v1), mean(v2,'omitnan'), std(v2,'omitnan'));
 end
 
-%% ===== (2) mocap D vs video D correlation =====
+%% (2) mocap D vs video D correlation
 fprintf([NL '===== (2) mocap D vs video D correlation (Pearson) =====' NL]);
 vcol = {'Dvid_x','Dvid_y','Dvid_z'};
 fprintf(['%-14s %18s %18s' NL], 'axis', 'all', 'excl. saturated');
@@ -62,7 +51,7 @@ for a = 1:3
     fprintf(['%-14s   R=%.2f (p=%.3f)   R=%.2f (p=%.3f)' NL], lbl{a}, r1, p1, r2, p2);
 end
 
-%% ===== (3) video D error =====
+%% (3) video D error
 fprintf([NL '===== (3) error of the video D (cm) =====' NL]);
 E = [Md.Dvid_x - Md.Dref_x, Md.Dvid_y - Md.Dref_y, Md.Dvid_z - Md.Dref_z]/10;
 En = vecnorm(E, 2, 2);
@@ -76,7 +65,7 @@ end
 [m2,s2] = local_ms(En, Md.subj, ~sat);
 fprintf(['%-14s %8.1f ± %-7.1f %8.1f ± %-7.1f' NL], '3D magnitude', m1, s1, m2, s2);
 
-%% ===== (4) trajectory error per phase (video D) =====
+%% (4) trajectory error per phase (video D)
 SEG = {'Backswing','add','bst'; 'Downswing','bst','imp'; ...
        'FollowThrough','imp','fin'; 'EntireSwing','add','fin'};
 n = numel(S); sj = nan(n,1); st2 = false(n,1); eV = nan(n,4);
@@ -100,7 +89,7 @@ for q = 1:4
     fprintf(['%-14s %8.1f ± %-7.1f %8.1f ± %-7.1f' NL], SEG{q,1}, m1, s1, m2, s2);
 end
 
-%% ===== helper functions =====
+%% helper functions
 function traj = local_correct(traj0, D, add, imp, fin)
     traj = traj0; dm = traj0(imp,:) - D;
     for kk = add:fin

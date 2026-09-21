@@ -1,15 +1,6 @@
 %% [R2-6] R2_06_event_velocity.m
-%  Reviewer 2, Comment R2-6 response
-%  ------------------------------------------------------------------------
-%  "zero velocity constraint" was pointed out as an imprecise expression, so
-%  the actual motion capture wrist velocity at ADD / BST / FIN is measured and reported.
-%  (the manuscript wording will be revised to "approximate zero-velocity assumption")
-%
-%  Prerequisite : R2_common_mocap_extract.m
+%  Wrist velocity measured at the swing events used as velocity anchors.
 %  Output      : revision/results/R2_06_event_velocity.csv
-%
-%  2026-08-28
-%% ========================================================================
 
 clc; clear; close all;
 
@@ -25,7 +16,7 @@ Msel = M(m, :);
 events = {'ADD', 'BST', 'FIN'};
 comps  = {'x', 'y', 'z', 'norm'};
 
-%% ===== participant-level aggregation (reflects the repeated-measures structure, R2-10 direction) =====
+%% participant-level aggregation (reflects the repeated-measures structure, R2-10 direction)
 subjList = unique(Msel.subj);
 nS = numel(subjList);
 
@@ -35,11 +26,9 @@ for e = 1:numel(events)
         col = sprintf('v%s_%s', events{e}, comps{c});
         v   = Msel.(col) / 1000;                 % mm/s -> m/s
 
-        % trial level
         tr_mean = mean(v, 'omitnan');
         tr_sd   = std(v, 'omitnan');
 
-        % participant level (per-participant mean -> between-participant mean ± SD)
         sm = nan(nS, 1);
         for s = 1:nS
             sm(s) = mean(v(Msel.subj == subjList(s)), 'omitnan');
@@ -47,7 +36,6 @@ for e = 1:numel(events)
         sj_mean = mean(sm, 'omitnan');
         sj_sd   = std(sm, 'omitnan');
 
-        % magnitude-based summary (prevents sign cancellation)
         abs_mean = mean(abs(v), 'omitnan');
         abs_max  = max(abs(v));
 
@@ -61,7 +49,7 @@ T = cell2table(rows, 'VariableNames', {'event', 'component', ...
     'mean_abs', 'max_abs', 'nTrial', 'nSubj'});
 writetable(T, fullfile(OUT_DIR, 'R2_06_event_velocity.csv'));
 
-%% ===== console output =====
+%% console output
 fprintf('\n============ [R2-6] Wrist velocity at swing events (m/s) ============\n');
 fprintf('driver, %d trials / %d subjects, motion capture, 5-point derivative + 15 Hz LPF\n\n', ...
     height(Msel), nS);
@@ -73,7 +61,7 @@ for r = 1:height(T)
         T.subj_mean(r), T.subj_sd(r), T.mean_abs(r), T.max_abs(r));
 end
 
-%% ===== reference : velocity at impact (for scale comparison with a non-zero instant) =====
+%% reference : velocity at impact (for scale comparison with a non-zero instant)
 vimp = Msel.vIMP_norm / 1000;
 fprintf('\n[Ref] |v| at IMP : %.2f ± %.2f m/s (max %.2f)\n', ...
     mean(vimp, 'omitnan'), std(vimp, 'omitnan'), max(vimp));

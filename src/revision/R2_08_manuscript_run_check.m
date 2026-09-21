@@ -1,14 +1,6 @@
 %% [R2-8] R2_08_manuscript_run_check.m
 %  Computes the per-event error with the model reported in the manuscript (runs_0112_accgyro_400800_ori7traj2)
-%  in two ways, per axis and 3D magnitude, and checks whether the manuscript table is reproduced.
-%
-%  Manuscript table (Proposed, cm) : BST 8.35/11.29/5.91, IMP 4.72/3.88/1.94, FIN 29.85/24.33/13.77
-%
-%  Prerequisite : R2_07_misalignment.m etc. (R2_03_traj_store_ori7.mat)
 %  Output      : revision/results/R2_08_manuscript_run_check.csv
-%
-%  2026-09-05
-%% ========================================================================
 
 clc; clear; close all;
 
@@ -71,7 +63,7 @@ T = cell2table(rows, 'VariableNames', {'run','event','X','Y','Z','norm3d'});
 writetable(T, fullfile(RES, 'R2_08_manuscript_run_check.csv'));
 fprintf([NL 'saved: results/R2_08_manuscript_run_check.csv' NL]);
 
-%% ===== Helper functions =====
+%% Helper functions
 function traj = local_correct(traj0, D, add, imp, fin)
     traj = traj0; dm = traj0(imp,:) - D;
     for kk = add:fin

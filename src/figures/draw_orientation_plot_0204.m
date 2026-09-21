@@ -1,22 +1,19 @@
 %% draw_figure400_401.m
 % Figure 400: 3-axis angle error (3x1 subplot) - proposed method (dark_red) only
-% Figure 401: quaternion angle error (single plot) - proposed method (dark_red) only
-% add, bst, imp, fin mean vertical lines + shade option
-% data loading based on draw_figure4_withmlest.m
 
 clc; clear all; close all;
 set(groot,'defaultAxesFontSize',14);
 
-%% ===== option settings =====
+%% option settings
 show_event_shade = true;   % true: show shade at the event instants, false: show xline only
 
-%% ===== colour definitions =====
+%% colour definitions
 dark_red = [128 0 32]/255;          % proposed method line colour
 event_color = [0.85 0.85 0.85];     % event shade colour
 event_alpha = 0.4;                   % event shade transparency
 event_line_color = [0 0 0];          % event vertical line colour
 
-%% ===== data loading =====
+%% data loading
 load swingData_2508_aftercal_imp+1_est.mat
 
 apdm_rate = 200;
@@ -28,7 +25,7 @@ ts = 0.005;
 
 OrientationMethod = 7;
 
-%% ===== ML folder path setup =====
+%% ML folder path setup
 mldataDir = fullfile(runsRoot(), 'runs_0112_accgyro_400800_ori7traj2');
 
 nSubj_ml = 10;
@@ -36,11 +33,10 @@ clubs_ml = {'driver','iron','fast'};
 nRows_ml = 10; nCols_ml = 3;
 nTrials = 10;
 
-% plot x axis range
 plot_x_start = 266;
 plot_x_end = 880;
 
-%% ===== ML data loading =====
+%% ML data loading
 ml_est = struct();
 for c = 1:numel(clubs_ml)
     ml_est.(clubs_ml{c}) = nan(nRows_ml, nCols_ml, nSubj_ml);
@@ -89,25 +85,23 @@ for subj = 1:nSubj_ml
     end
 end
 
-%% ===== initialise the result storage variables =====
+%% initialise the result storage variables
 max_frames = 900;
 nSubj = 10;
 max_trials_per_subj = 10;
 
-% stored per participant (4D: frames x 3 x trials x subjects)
 angle_error_axis_all = nan(max_frames, 3, max_trials_per_subj, nSubj);
 angle_error_quat_all = nan(max_frames, max_trials_per_subj, nSubj);
 
-% event storage (per participant)
 event_add_all = nan(max_trials_per_subj, nSubj);
 event_bst_all = nan(max_trials_per_subj, nSubj);
 event_imp_all = nan(max_trials_per_subj, nSubj);
 event_fin_all = nan(max_trials_per_subj, nSubj);
 
-%% ===== Butterworth filter =====
+%% Butterworth filter
 [b, a] = butter(4, cut_freq/(apdm_rate/2));
 
-%% ===== main loop =====
+%% main loop
 fprintf('\nProcessing trials...\n');
 z_total = 1;
 
@@ -117,7 +111,6 @@ for subj = 1:10
     for club = 1
         
         for trial = 21:30
-            % exception handling
             if subj==8 && club==1 && trial==30
                 continue
             end
@@ -138,18 +131,16 @@ for subj = 1:10
                 g.fin = 900;
             end
             
-            % get imp_est
             add_est = g.add_est;
             imp_est = g.imp_est;
             rel_est = imp_est - add_est;
             
-            % store the event instants (per participant)
             event_add_all(z_subj, subj) = g.add;
             event_bst_all(z_subj, subj) = g.bst;
             event_imp_all(z_subj, subj) = g.imp;
             event_fin_all(z_subj, subj) = g.fin;
             
-            %% marker data
+%% marker data
             WristU = g.marker(:,13:15);
             WristM = g.marker(:,10:12);
             WristL = g.marker(:,7:9);
@@ -160,7 +151,7 @@ for subj = 1:10
             magnet = g.apdm(:,7:9);
             m_cal = magnet;
             
-            %% compute R2Lw (marker-based orientation)
+%% compute R2Lw (marker-based orientation)
             Cw = (WristU + WristL) ./ 2;
             Lo = WristL - Cw;
             Mo = WristM - Cw;
@@ -197,7 +188,6 @@ for subj = 1:10
                 R2Lw(:,:,j) = [vprime_xw(j,:)' vprime_yw(j,:)' vprime_zw(j,:)'];
             end
             
-            % R2Lwq (quaternion)
             R2Lwq = zeros(length(time), 4);
             for t = 1:length(time)
                 R2Lwq(t,:) = dcm2quatern(R2Lw(:,:,t)');
@@ -206,7 +196,7 @@ for subj = 1:10
                 end
             end
             
-            %% OrientationMethod = 7
+%% OrientationMethod = 7
             local_frame = R2Lw(:,:,g.add);
             
             pitch_marker = asin(-local_frame(3,1));
@@ -217,7 +207,6 @@ for subj = 1:10
             pitch_marker = rad2deg(pitch_marker);
             yaw_marker = rad2deg(yaw_marker);
             
-            % IMU-based roll, pitch
             acclocal_data = acc_data(g.add,:);
             acc_global = [acclocal_data(1); acclocal_data(2); acclocal_data(3)];
             acc_norm = norm(acc_global);
@@ -233,12 +222,10 @@ for subj = 1:10
             phi = roll;
             theta = pitch;
             
-            % magnetometer-based yaw
             mx = m_cal(g.add,1); my = m_cal(g.add,2); mz = m_cal(g.add,3);
             mxh = mx.*cos(theta) + my.*sin(phi).*sin(theta) + mz.*cos(phi).*sin(theta);
             myh = my.*cos(phi) - mz.*sin(phi);
             
-            % psi correction (0112 version)
             psi0_deg = 191.53;
             alpha_deg = rad2deg(atan2(myh, mxh));
             yaw_imu_deg = psi0_deg - alpha_deg;
@@ -249,7 +236,6 @@ for subj = 1:10
                 psi = deg2rad(yaw_marker);
             end
             
-            % build the rotation matrix
             Rx = [1         0           0
                   0 cos(phi) -sin(phi)
                   0 sin(phi)  cos(phi)];
@@ -265,10 +251,8 @@ for subj = 1:10
             global_frame = [1 0 0; 0 1 0; 0 0 1];
             R2tri = Rz * Ry * Rx * global_frame;
             
-            % Orientation integration
             Rinf = get_orientation_apdm(time, acc_data, gyro_data, g.add, R2tri);
             
-            % compute qinf (proposed method)
             qinf = zeros(length(time), 4);
             for t = 1:length(time)
                 qinf(t,:) = dcm2quatern(Rinf(:,:,t)');
@@ -277,7 +261,7 @@ for subj = 1:10
                 end
             end
             
-            %% compute the angle error (quaternion) - for Figure 401
+%% compute the angle error (quaternion) - for Figure 401
             angle_error = [];
             for i = 1:length(time)
                 qprod = quaternProd(quaternConj(qinf(i,:)), R2Lwq(i,:));
@@ -288,23 +272,18 @@ for subj = 1:10
                 angle_error = [angle_error, tempAng];
             end
             
-            % append to angle_error_plot
             angle_error_plot = [angle_error_plot angle_error'];
             
-            %% compute the 3-axis angle error (Euler angles) - for Figure 400
+%% compute the 3-axis angle error (Euler angles) - for Figure 400
             angle_error_axis = [];
             for i = 1:length(time)
-                % globally align
                 R1 = R2Lw(:,:,i);
                 R2 = Rinf(:,:,i);
                 
-                % difference between the two rotation matrices (relative rotation matrix)
                 R_diff = R2 * R1';  % how much the reference value must be rotated to give the estimate
                 
-                % convert R_diff to Euler angles (ZYX order)
                 eul_angles = rotm2eul(R_diff, 'ZYX');
                 
-                % angle error about each axis (radians converted to degrees)
                 roll_error_deg = rad2deg(eul_angles(3));   % x axis (roll) error
                 pitch_error_deg = rad2deg(eul_angles(2));  % y axis (pitch) error
                 yaw_error_deg = rad2deg(eul_angles(1));    % z axis (yaw) error
@@ -312,10 +291,8 @@ for subj = 1:10
                 angle_error_axis = [angle_error_axis; roll_error_deg, pitch_error_deg, yaw_error_deg];
             end
             
-            % store in angle_error_axis_all (per participant)
             angle_error_axis_all(:,:,z_subj,subj) = angle_error_axis;
             
-            % store in angle_error_quat_all (per participant)
             angle_error_quat_all(:,z_subj,subj) = angle_error';
             
             z_subj = z_subj + 1;
@@ -327,8 +304,7 @@ end
 
 fprintf('\nTotal trials: %d\n', z_total-1);
 
-%% ===== per-participant mean → overall mean (Subject-level averaging) =====
-% step 1: compute the per-participant mean
+%% per-participant mean → overall mean (Subject-level averaging)
 subj_axis_means = nan(max_frames, 3, nSubj);   % for Figure 400
 subj_quat_means = nan(max_frames, nSubj);       % for Figure 401
 subj_event_add = nan(nSubj, 1);
@@ -348,7 +324,6 @@ for subj = 1:nSubj
     end
 end
 
-% step 2: between-participant mean/standard deviation
 mean_xyz = mean(subj_axis_means, 3, 'omitnan');   % [900 x 3]
 std_xyz = std(subj_axis_means, 0, 3, 'omitnan');  % [900 x 3]
 
@@ -366,7 +341,7 @@ event_fin_std = std(subj_event_fin, 0, 'omitnan');
 
 fprintf('per-participant mean → overall mean approach (N=%d subjects)\n', nSubj);
 
-%% ===== for the previous version: mean over all trials (for comparison) =====
+%% for the previous version: mean over all trials (for comparison)
 all_axis_old = [];
 all_quat_old = [];
 all_add_old = [];
@@ -400,12 +375,11 @@ event_imp_std_old = std(all_imp_old, 0, 'omitnan');
 event_fin_mean_old = mean(all_fin_old, 'omitnan');
 event_fin_std_old = std(all_fin_old, 0, 'omitnan');
 
-%% ===== Figure 400: 3-axis angle error (per-participant mean) =====
+%% Figure 400: 3-axis angle error (per-participant mean)
 
 T_frames = size(mean_xyz, 1);
 t = 1:T_frames;
 
-% Figure setup
 fig_width = 600;
 fig_height = 551;  % total height of the 3x1 subplot
 
@@ -423,17 +397,14 @@ for i = 1:3
     hold(ax(i), 'on'); 
     grid(ax(i), 'on');
     
-    % extract the data (row vector)
     m = mean_xyz(:,i)';
     s = std_xyz(:,i)';
     
-    % compute the y axis range
     y_data_min = min(m(plot_x_start:plot_x_end) - s(plot_x_start:plot_x_end));
     y_data_max = max(m(plot_x_start:plot_x_end) + s(plot_x_start:plot_x_end));
     y_min_ax = floor(y_data_min / 10) * 10;
     y_max_ax = ceil(y_data_max / 10) * 10;
     
-    % show the events
     if show_event_shade
         fill(ax(i), [event_add_mean - event_add_std, event_add_mean + event_add_std, ...
               event_add_mean + event_add_std, event_add_mean - event_add_std], ...
@@ -456,33 +427,26 @@ for i = 1:3
              event_color, 'EdgeColor', 'none', 'FaceAlpha', event_alpha, 'HandleVisibility', 'off');
     end
     
-    % event mean vertical lines
     xline(ax(i), event_add_mean, '-', 'Color', event_line_color, 'LineWidth', 1, 'HandleVisibility', 'off');
     xline(ax(i), event_bst_mean, '-', 'Color', event_line_color, 'LineWidth', 1, 'HandleVisibility', 'off');
     xline(ax(i), event_imp_mean, '-', 'Color', event_line_color, 'LineWidth', 1, 'HandleVisibility', 'off');
     xline(ax(i), event_fin_mean, '-', 'Color', event_line_color, 'LineWidth', 1, 'HandleVisibility', 'off');
     
-    % proposed method shade + line (dark_red)
     fill(ax(i), [t fliplr(t)], [m+s fliplr(m-s)], dark_red, ...
         'FaceAlpha', alpha_prop, 'EdgeColor', 'none', 'HandleVisibility', 'off');
     plot(ax(i), t, m, '-', 'Color', dark_red, 'LineWidth', lw);
     
-    % axis setup
     xlim(ax(i), [plot_x_start plot_x_end]);
     ylim(ax(i), [y_min_ax y_max_ax]);
     
-    % remove x axis ticks (add a condition to exclude the last subplot if wanted)
     set(ax(i), 'XTick', []);
     set(ax(i), 'XTickLabel', []);
     
-    % y axis ticks in steps of 10
     y_ticks_ax = y_min_ax:10:y_max_ax;
     set(ax(i), 'YTick', y_ticks_ax);
     
-    % remove ylabel
     ylabel(ax(i), '');
     
-    % font setup
     set(ax(i), 'FontSize', 14, 'FontName', 'Gill Sans MT');
 end
 
@@ -490,15 +454,14 @@ linkaxes(ax, 'x');
 
 fprintf('Figure 400 (3x1 subplot) created\n');
 
-%% ===== Figure 401: quaternion angle error (per-participant mean) =====
+%% Figure 401: quaternion angle error (per-participant mean)
 T_frames = size(m_prop_subj, 2);
 t = 1:T_frames;
 
 m_prop = m_prop_subj;
 s_prop = s_prop_subj;
 
-%% ===== Figure setup =====
-% same size as one of the 3x1 subplots
+%% Figure setup
 fig_width = 600;
 fig_height = 184;  % about 1/3 of the total height of 551
 
@@ -507,89 +470,75 @@ set(gcf, 'Color', 'w', 'Position', [100, 300, fig_width, fig_height]);
 
 hold on;
 
-%% ===== y axis range setup =====
+%% y axis range setup
 y_data_min = min(m_prop(plot_x_start:plot_x_end) - s_prop(plot_x_start:plot_x_end));
 y_data_max = max(m_prop(plot_x_start:plot_x_end) + s_prop(plot_x_start:plot_x_end));
 y_min = floor(y_data_min / 10) * 10;
 y_max = ceil(y_data_max / 10) * 10;
 
-%% ===== event display =====
+%% event display
 if show_event_shade
-    % shade for the add event
     fill([event_add_mean - event_add_std, event_add_mean + event_add_std, ...
           event_add_mean + event_add_std, event_add_mean - event_add_std], ...
          [y_min, y_min, y_max, y_max], ...
          event_color, 'EdgeColor', 'none', 'FaceAlpha', event_alpha, 'HandleVisibility', 'off');
     
-    % shade for the bst event
     fill([event_bst_mean - event_bst_std, event_bst_mean + event_bst_std, ...
           event_bst_mean + event_bst_std, event_bst_mean - event_bst_std], ...
          [y_min, y_min, y_max, y_max], ...
          event_color, 'EdgeColor', 'none', 'FaceAlpha', event_alpha, 'HandleVisibility', 'off');
     
-    % shade for the imp event
     fill([event_imp_mean - event_imp_std, event_imp_mean + event_imp_std, ...
           event_imp_mean + event_imp_std, event_imp_mean - event_imp_std], ...
          [y_min, y_min, y_max, y_max], ...
          event_color, 'EdgeColor', 'none', 'FaceAlpha', event_alpha, 'HandleVisibility', 'off');
     
-    % shade for the fin event
     fill([event_fin_mean - event_fin_std, event_fin_mean + event_fin_std, ...
           event_fin_mean + event_fin_std, event_fin_mean - event_fin_std], ...
          [y_min, y_min, y_max, y_max], ...
          event_color, 'EdgeColor', 'none', 'FaceAlpha', event_alpha, 'HandleVisibility', 'off');
 end
 
-% event mean vertical lines
 xline(event_add_mean, '-', 'Color', event_line_color, 'LineWidth', 1, 'HandleVisibility', 'off');
 xline(event_bst_mean, '-', 'Color', event_line_color, 'LineWidth', 1, 'HandleVisibility', 'off');
 xline(event_imp_mean, '-', 'Color', event_line_color, 'LineWidth', 1, 'HandleVisibility', 'off');
 xline(event_fin_mean, '-', 'Color', event_line_color, 'LineWidth', 1, 'HandleVisibility', 'off');
 xline(880, '-', 'Color', event_line_color, 'LineWidth', 1, 'HandleVisibility', 'off');
 
-%% ===== proposed method shade + line (dark_red) =====
+%% proposed method shade + line (dark_red)
 alpha_prop = 0.2;  % proposed method shade transparency
 lw = 1.6;          % line width
 
-% Shade
 fill([t fliplr(t)], [m_prop + s_prop, fliplr(m_prop - s_prop)], ...
      dark_red, 'FaceAlpha', alpha_prop, 'EdgeColor', 'none', 'HandleVisibility', 'off');
 
-% Mean line
 plot(t, m_prop, '-', 'Color', dark_red, 'LineWidth', lw);
 
-%% ===== axis setup =====
+%% axis setup
 xlim([plot_x_start plot_x_end]);
 ylim([y_min y_max]);
 
-% remove x axis ticks
 set(gca, 'XTick', []);
 set(gca, 'XTickLabel', []);
 
-% y axis ticks in steps of 10
 y_ticks = y_min:10:y_max;
 set(gca, 'YTick', y_ticks);
 
-% remove xlabel, ylabel
 xlabel('');
 ylabel('');
 
-% font setup
 set(gca, 'FontSize', 14, 'FontName', 'Gill Sans MT');
 
-% grid on;
 hold off;
 
-%% ===== save (optional) =====
-% print(figure(400), 'figure400_3axis_darkred.svg', '-dsvg', '-vector');
-% print(figure(401), 'figure401_darkred.svg', '-dsvg', '-vector');
+%% save (optional)
 
 fprintf('\nFigure 400, 401 created (per-participant mean approach)\n');
 fprintf('show_event_shade = %s\n', mat2str(show_event_shade));
 fprintf('Event means: ADD=%.1f, BST=%.1f, IMP=%.1f, FIN=%.1f\n', ...
         event_add_mean, event_bst_mean, event_imp_mean, event_fin_mean);
 
-%% ===== Figure 4001: previous version 3-axis angle error (mean over all trials) =====
+%% Figure 4001: previous version 3-axis angle error (mean over all trials)
 T_frames_old = size(mean_xyz_old, 1);
 t_old = 1:T_frames_old;
 
@@ -652,7 +601,7 @@ end
 linkaxes(ax_old, 'x');
 sgtitle('Figure 4001: previous version (mean over all trials)', 'FontSize', 14);
 
-%% ===== Figure 4011: previous version quaternion angle error =====
+%% Figure 4011: previous version quaternion angle error
 figure(4011); clf;
 set(gcf, 'Color', 'w', 'Position', [750, 300, fig_width, fig_height]);
 hold on;

@@ -1,24 +1,6 @@
 %% [R2-10] R2_10_subject_specificity.m
 %  Directly checks whether the constraint has to be participant-specific.
-%
-%  "Is a different D per participant really needed? Does correction not work with the same value for everyone?"
-%  To answer that, everything else is kept identical and only the applied constraint is changed.
-%
-%     none            : no displacement correction
-%     group mean D    : one constant for all participants and trials
-%     subject mean D  : each participant's own reference mean (no trial variation)
-%     motion capture D: per-trial reference value (upper bound)
-%     D_Vision        : video-based
-%     D_Infer         : IMU inference
-%
-%  The difference between group mean and participant mean is the magnitude of "why it must be participant-specific".
-%  The difference between participant mean and motion capture is the magnitude of "why it must be trial-specific".
-%
-%  Data   : driver evaluation set, 99 trials
 %  Output : revision/results/R2_10_subject_specificity.csv
-%
-%  2026-09-06
-%% ========================================================================
 
 clc; clear; close all;
 thisDir = fileparts(mfilename('fullpath'));

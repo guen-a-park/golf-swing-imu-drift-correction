@@ -1,15 +1,6 @@
 %% [R2-10] R2_10_corr_test_levels.m
 %  Redoes the correlation test the manuscript used against MotionAGFormer, accounting for the repeated-measures structure.
-%
-%  The manuscript applied the Hotelling-Williams test to the pooled-trial correlation. That treats the several
-%  trials from one participant as independent samples, so the degrees of freedom are inflated.
-%  The same test is repeated on participant means and both results are presented together.
-%
-%  Data   : driver evaluation set (same test trials as the manuscript)
 %  Output : revision/results/R2_10_corr_test_levels.csv
-%
-%  2026-09-05
-%% ========================================================================
 
 clc; clear; close all;
 thisDir = fileparts(mfilename('fullpath'));
@@ -55,7 +46,6 @@ writetable(T, fullfile(OUT, 'R2_10_corr_test_levels.csv'));
 fprintf([NL 'saved: results/R2_10_corr_test_levels.csv' NL]);
 
 function [t, p] = local_hw(r12, r13, r23, n)
-% Williams(1959) / Steiger(1980) : test of the difference between two correlations sharing a common variable
     R  = 1 - r12^2 - r13^2 - r23^2 + 2*r12*r13*r23;
     rb = (r12 + r13) / 2;
     df = n - 3;

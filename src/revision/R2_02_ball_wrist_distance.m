@@ -1,35 +1,6 @@
 %% [R2-2] R2_02_ball_wrist_distance.m
-%  Response to Reviewer 2, Comment R2-2
-%  ------------------------------------------------------------------------
-%  Comment: quantify the validity and sensitivity of the hard geometric constraint
-%        "ball-wrist distance = club length". How an error in the assumed distance
-%        affects D_Vision and the final corrected trajectory, and what within-participant variation (about ±2 cm) means in practice.
-%
-%  Computation
-%   (A) actual ball-wrist distance from motion capture (the ball is the origin, so |abs_wrist|)
-%       - difference from the assumed club length
-%       - ADD vs IMP difference  (the reviewer's main point: the effective distance differs between the two events)
-%       - between-trial variation (within-participant SD)
-%   (B) assumed distance error -> effect on D_Vision
-%       the video reconstruction enforces |p_W| = l (confirmed empirically), so the ray can be
-%       recovered from the camera centre T_W and the existing solution p_est and re-solved for any l.
-%           p(l) = T_W + s(l)*r_hat,  |p(l)| = l
-%       - dD/dl : analytical sensitivity (the same expression as dsdL in clublength_3d_1020.m)
-%       - change in D when l is replaced by the actual distance (exact re-solve)
-%       - |dD| for the +-2 cm the reviewer gave as an example
-%   (C) D_Vision error -> effect on the final corrected trajectory
-%       correction X_corr(t) = X_IMU(t) - w(t)*e_IMP,  e_IMP = X_IMU(t_IMP) - D,
-%       w(t) = (t-t_ADD)/(t_IMP-t_ADD), so dX_corr(t)/dD = +w(t).
-%       i.e. an error dD in D propagates as dD itself at impact, and as dD * mean(w)
-%       of trajectory error when averaged over ADD~IMP. A closed form exists, so it is reported as is.
-%
-%  Run first : R2_common_mocap_extract.m
+%  Validity and sensitivity of the club-length geometric constraint.
 %  Output    : revision/results/R2_02_ball_wrist_distance.csv
-%              revision/results/R2_02_sensitivity.csv
-%              revision/results/fig_R2_02_ball_wrist_distance.png/.svg
-%
-%  2026-08-28
-%% ========================================================================
 
 clc; clear; close all;
 set(groot, 'defaultAxesFontSize', 12);
@@ -41,8 +12,6 @@ load(fullfile(OUT_DIR, 'R2_common_mocap_metrics.mat'), 'M', 'club_length');
 
 subjN = ["S01","S02","S03","S04","S05","S06","S07","S08","S09","S10"];
 
-% camera centre from clublength_3d_1020.m (world frame, mm)
-% club==3 uses the same columns (1:3) as club==1 (same as the original code)
 T_CAM = [1944.24195587, -147.53836065, 1065.52214668, 1988.64350687,  74.47982735, 1112.23512068;
          1946.26368487, -145.41073665, 1064.27866168, 1994.22126587,  81.45108035, 1111.14594468;
          1941.23811087, -147.26589965, 1064.27767068, 2038.02827187,  89.00796435, 1111.81709868;
@@ -58,9 +27,7 @@ CLUB_SEL = 1;                       % driver
 Msel = M(M.club == CLUB_SEL, :);
 nT = height(Msel);
 
-%% ========================================================================
 %% (A) actual ball-wrist distance
-%% ========================================================================
 d_add = Msel.L_add - Msel.L_assumed;        % mm, actual - assumed
 d_imp = Msel.L_imp - Msel.L_assumed;
 d_impadd = Msel.L_imp - Msel.L_add;         % IMP - ADD (change in effective distance)
@@ -103,12 +70,8 @@ fprintf('\nwithin-participant between-trial SD (mean) : ADD %.2f cm, IMP %.2f cm
 fprintf('ADD vs IMP effective distance difference (participant-level paired samples) : %.2f cm, p = %.4f\n', ...
     mean(A.Limp_mean_cm - A.Ladd_mean_cm), p_ai);
 
-%% ========================================================================
 %% (B) assumed distance error -> D_Vision sensitivity
-%% ========================================================================
-%  the video reconstruction enforces |p_W| = l. Hence recovering the unit line-of-sight vector
-%  from the camera centre T_W and the existing solution p_est allows a re-solve for any l.
-DELTA_CM = 2;                                % ±2 cm given by the reviewer as an example
+DELTA_CM = 2;                                % +-2 cm, used as a worked example
 Brows = {};
 sens_add = nan(nT, 3); sens_imp = nan(nT, 3);   % dX/dl  (dimensionless, mm/mm)
 dD_true  = nan(nT, 3);                           % change in D when l is replaced by the actual distance
@@ -129,12 +92,10 @@ for k = 1:nT
     sens_add(k,:) = local_dXdl(Tw, ra, l0)';
     sens_imp(k,:) = local_dXdl(Tw, ri, l0)';
 
-    % exact re-solve with l replaced by the measured distance
     qa = local_solve(Tw, ra, Msel.L_add(k), sa);
     qi = local_solve(Tw, ri, Msel.L_imp(k), si_);
     dD_true(k,:) = ((qi - qa) - (p_imp - p_add))';
 
-    % when l is increased by DELTA_CM (ADD/IMP shifted equally)
     qa2 = local_solve(Tw, ra, l0 + DELTA_CM*10, sa);
     qi2 = local_solve(Tw, ri, l0 + DELTA_CM*10, si_);
     dD_2cm(k,:) = ((qi2 - qa2) - (p_imp - p_add))';
@@ -162,11 +123,7 @@ fprintf('  ΔD per axis (cm) : X %+.2f ± %.2f, Y %+.2f ± %.2f, Z %+.2f ± %.2f
     mean(dD_true(ok,2))/10, std(dD_true(ok,2))/10, ...
     mean(dD_true(ok,3))/10, std(dD_true(ok,3))/10);
 
-%% ========================================================================
 %% (C) D_Vision error -> propagation into corrected trajectory error (closed form)
-%% ========================================================================
-%  X_corr(t) = X_IMU(t) - w(t)*(X_IMU(t_IMP) - D),  w = (t-t_ADD)/(t_IMP-t_ADD)
-%  => dX_corr(t)/dD = w(t).  w = 1 at impact, so ΔD becomes the trajectory error directly.
 wbar_full = nan(nT,1); wbar_down = nan(nT,1);
 for k = 1:nT
     a = Msel.idxADD(k); b = Msel.idxBST(k); i = Msel.idxIMP(k);
@@ -181,7 +138,7 @@ fprintf('the correction term is distributed linearly from ADD(0) to IMP(1), so d
 fprintf('  at impact          : trajectory error = |ΔD|        (w = 1)\n');
 fprintf('  ADD~IMP mean       : trajectory error = %.2f x |ΔD|\n', mean(wbar_full));
 fprintf('  downswing mean     : trajectory error = %.2f x |ΔD|\n', mean(wbar_down));
-fprintf('\nanswer to the reviewer example (±2 cm):\n');
+fprintf('\nworked example (+-2 cm):\n');
 fprintf('  club length mis-assumed by 2 cm -> |ΔD| = %.2f cm\n', mean(n2));
 fprintf('  -> impact trajectory error +%.2f cm, downswing mean +%.2f cm\n', ...
     mean(n2), mean(n2)*mean(wbar_down));
@@ -196,9 +153,7 @@ Srows = {'dDdl_perCm', mean(vecnorm(dDdl(ok,:),2,2)), std(vecnorm(dDdl(ok,:),2,2
 S = cell2table(Srows, 'VariableNames', {'quantity','mean','sd'});
 writetable(S, fullfile(OUT_DIR, 'R2_02_sensitivity.csv'));
 
-%% ========================================================================
 %% figure
-%% ========================================================================
 figure('Color','w','Position',[100 100 1000 380]);
 
 subplot(1,3,1); hold on; grid on;
@@ -231,18 +186,14 @@ fprintf('\nsaved: %s\n', fullfile(OUT_DIR, 'R2_02_ball_wrist_distance.csv'));
 fprintf('saved: %s\n', fullfile(OUT_DIR, 'R2_02_sensitivity.csv'));
 fprintf('saved: %s\n', fullfile(OUT_DIR, 'fig_R2_02_ball_wrist_distance.png'));
 
-
-%% ===== local functions =====
+%% local functions
 function [s, rhat] = local_ray(Tw, p)
-% recover the line of sight (unit vector) and the depth from the camera centre Tw and the reconstructed point p
     d = p - Tw;
     s = norm(d);
     rhat = d / s;
 end
 
 function dXdl = local_dXdl(Tw, rhat, l)
-% analytical dX/dl for the larger root of |Tw + s*rhat| = l
-% a = 1 (unit vector), b = 2*rhat·Tw, c = |Tw|^2 - l^2
     b = 2*dot(rhat, Tw);
     c = dot(Tw, Tw) - l^2;
     Delta = b^2 - 4*c;
@@ -250,7 +201,6 @@ function dXdl = local_dXdl(Tw, rhat, l)
 end
 
 function q = local_solve(Tw, rhat, l, s_ref)
-% of the intersections with the sphere of radius l on the same line of sight, the one closer to the existing solution (s_ref)
     b = 2*dot(rhat, Tw);
     c = dot(Tw, Tw) - l^2;
     Delta = b^2 - 4*c;

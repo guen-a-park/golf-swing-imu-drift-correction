@@ -1,15 +1,6 @@
 %% [R2-1] R2_01_fps_trajectory_figure.m
 %  Shows as a figure how the 2D wrist trajectory actually changes when the frame rate is lowered.
-%  ------------------------------------------------------------------------
-%  Question : it is hard to accept that D changes by only 1.6 cm even down to 30 fps.
-%  Check    : the decimated sample points, and the trajectory interpolated to 200 Hz and filtered at 10 Hz,
-%         plotted together with the original 150 fps pipeline result. Since only the two instants address and impact
-%         are used, the key question is where the error is large.
-%
 %  Output : results/fig_R2_01_fps_traj.png / .svg
-%
-%  2026-08-31
-%% ========================================================================
 
 clc; clear; close all;
 set(groot, 'defaultAxesFontSize', 14);
@@ -30,7 +21,7 @@ FPS_LIST = [150 120 60 30];
 dark_red = [128 0 32]/255;
 COL = [0 0 0; 0.30 0.45 0.75; 0.90 0.55 0.10; dark_red];
 
-%% ----- data ------------------------------------------------------------
+%% data
 load(fullfile(baseDir, 'swingData_2508_aftercal_imp+1_est.mat'), 'swingData_2508');
 g = swingData_2508(SUBJ).clubN(CLUB).trialN(TRIAL);
 add = double(g.add); imp = double(g.imp);
@@ -54,36 +45,37 @@ for fi = 1:numel(FPS_LIST)
     SMP{fi,2} = pg;
 end
 
-%% ----- figure --------------------------------------------------------------
-figure('Color', 'w', 'Position', [80 80 1180 420]);
-tiledlayout(1, 2, 'TileSpacing', 'compact', 'Padding', 'compact');
+%% figure
+fig = figure('Color', 'w', 'Units', 'inches', 'Position', [1 1 6.6 2.4], ...
+             'PaperUnits', 'inches', 'PaperSize', [6.6 2.4], ...
+             'PaperPosition', [0 0 6.6 2.4]);
+set(fig, 'DefaultAxesFontName', 'Gill Sans MT', 'DefaultTextFontName', 'Gill Sans MT');
+tl = tiledlayout(fig, 1, 2, 'TileSpacing', 'compact', 'Padding', 'compact');
 win = (t >= -2.0) & (t <= 0.6);
 
-% (A) x pixel
-nexttile; hold on;
-for fi = 1:numel(FPS_LIST)
-    plot(t(win), S{fi}(win,1), 'Color', COL(fi,:), 'LineWidth', 1.6);
+PANEL = {'A', 'B'};
+YL = {'Wrist x (pixel)', 'Wrist y (pixel)'};
+for k = 1:2
+    ax = nexttile(tl); hold(ax, 'on'); box(ax, 'off');
+    set(ax, 'FontSize', 9, 'TickDir', 'in', 'LineWidth', 0.6, 'Layer', 'top');
+    for fi = 1:numel(FPS_LIST)
+        plot(ax, t(win), S{fi}(win,k), 'Color', COL(fi,:), 'LineWidth', 1.2);
+    end
+    local_events(t, add, imp);
+    ylabel(ax, YL{k}, 'FontSize', 9);
+    xlabel(ax, 'Time from impact (s)', 'FontSize', 9);
+    text(ax, -0.15, 1.12, PANEL{k}, 'Units', 'normalized', ...
+         'FontName', 'Gill Sans MT', 'FontSize', 12, 'VerticalAlignment', 'top');
+    if k == 1
+        legend(ax, compose('%d fps', FPS_LIST), 'Location', 'northwest', ...
+               'Box', 'off', 'FontSize', 8);
+    end
 end
-local_events(t, add, imp);
-ylabel('Wrist x (pixel)'); xlabel('Time from impact (s)');
-title('(A) Horizontal pixel coordinate');
-legend(compose('%d fps', FPS_LIST), 'Location', 'northwest', 'Box', 'off');
-box off;
 
-% (B) y pixel
-nexttile; hold on;
-for fi = 1:numel(FPS_LIST)
-    plot(t(win), S{fi}(win,2), 'Color', COL(fi,:), 'LineWidth', 1.6);
-end
-local_events(t, add, imp);
-ylabel('Wrist y (pixel)'); xlabel('Time from impact (s)');
-title('(B) Vertical pixel coordinate');
-box off;
+print(fig, fullfile(OUT_DIR, 'fig_R2_01_fps_traj.png'), '-dpng', '-r300');
+print(fig, fullfile(OUT_DIR, 'fig_R2_01_fps_traj.svg'), '-dsvg');
 
-exportgraphics(gcf, fullfile(OUT_DIR, 'fig_R2_01_fps_traj.png'), 'Resolution', 300);
-saveas(gcf, fullfile(OUT_DIR, 'fig_R2_01_fps_traj.svg'));
-
-%% ----- values at the two events ------------------------------------------------
+%% values at the two events
 fprintf('\n=== participant %d, driver %d: pixel coordinates by frame rate ===\n', SUBJ, TRIAL);
 fprintf('%-8s %22s %22s %14s\n', 'fps', 'ADD (x, y)', 'IMP (x, y)', 'IMP deviation(px)');
 for fi = 1:numel(FPS_LIST)
@@ -97,8 +89,7 @@ fprintf('\n30 fps deviation from 150 fps: address %.2f px, impact %.2f px, downs
     d_all(add), d_all(imp), max(d_all(seg)));
 fprintf('saved: %s\n', fullfile(OUT_DIR, 'fig_R2_01_fps_traj.png'));
 
-
-%% ----- local -------------------------------------------------------------
+%% local
 function local_events(t, add, imp)
     yl = ylim;
     xline(t(add), 'k-', 'ADD', 'LabelVerticalAlignment', 'bottom');

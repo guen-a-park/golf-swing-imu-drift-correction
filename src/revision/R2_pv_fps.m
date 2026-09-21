@@ -1,12 +1,6 @@
 %% R2_pv_fps.m
 %  tests whether the per-phase trajectory error changes significantly when the frame rate is lowered.
-%  the same procedure as R2_13_fps_phase_error.m, but participant-level values are kept for each fps and
-%  a paired t test against the 150 fps baseline is performed.
-%
 %  Output : revision/results/R2_pv_fps.csv
-%
-%  2026-09-10
-%% ========================================================================
 
 clc; clear; close all;
 
@@ -52,7 +46,7 @@ for fi = 1:numel(FPS)
     end
 end
 
-%% ----- paired t test against the 150 fps baseline ------------------------
+%% paired t test against the 150 fps baseline
 base = find(FPS == 150, 1);
 rows = {};
 fprintf('\n===== effect of lowering the frame rate (150 fps baseline, participant-level paired t test) =====\n');

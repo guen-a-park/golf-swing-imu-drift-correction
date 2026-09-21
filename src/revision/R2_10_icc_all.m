@@ -1,21 +1,6 @@
 %% [R2-10] R2_10_icc_all.m
 %  Compares the between-participant reproducibility of the four estimates by ICC against a single motion capture reference.
-%
-%  Figure 3 of the manuscript put D~Vision~ on the x-axis in D-F and G-I to show how closely the model follows
-%  the training target. Here the reference is unified to motion capture D alone, so that each estimate is
-%  compared on the same scale for how well it reproduces the between-participant differences of the actual constraint.
-%
-%  Items compared
-%     D_Vision      : video-based constraint
-%     D_Infer       : pooled model (trained including the evaluation participants)
-%     D_Infer LOSO  : leave-one-subject-out model
-%     D_AGFormer    : MotionAGFormer
-%
-%  Metric : ICC(C,1) and its 95 % confidence interval. Computed on the 10 participant means.
 %  Output : revision/results/R2_10_icc_all.csv
-%
-%  2026-09-06
-%% ========================================================================
 
 clc; clear; close all;
 thisDir = fileparts(mfilename('fullpath'));
@@ -62,7 +47,7 @@ T = cell2table(rows, 'VariableNames', {'estimate','axis','ICC','CI_lo','CI_hi','
 writetable(T, fullfile(OUT, 'R2_10_icc_all.csv'));
 fprintf([NL 'saved: results/R2_10_icc_all.csv' NL]);
 
-%% ===== helper functions =====
+%% helper functions
 function D = local_load(runDir, subj, isLoso)
     D = nan(numel(subj), 3);
     for su = unique(subj)'

@@ -1,12 +1,6 @@
 %% R2_pv_nosat_within.m
 %  Pairs and compares the trajectory error of saturated and non-saturated trials within the same participant.
-%  Same design as the within-participant comparison for orientation error (orientation_saturation_withinsubject.csv),
-%  using only the per-trial errors of the manuscript model, independent of retraining.
-%
 %  Output : revision/results/R2_pv_nosat_within.csv
-%
-%  2026-09-10
-%% ========================================================================
 
 clc; clear; close all;
 
@@ -56,7 +50,7 @@ writetable(cell2table(rows, 'VariableNames', ...
     fullfile(RES, 'R2_pv_nosat_within.csv'));
 fprintf('\nsaved: results/R2_pv_nosat_within.csv\n');
 
-%% ===== helpers =====
+%% helpers
 function e = local_phase(S, Dm, SEG)
     n = numel(S); e = nan(n,4);
     for k = 1:n

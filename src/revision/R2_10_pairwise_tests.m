@@ -1,16 +1,6 @@
 %% [R2-10] R2_10_pairwise_tests.m
 %  Computes in one pass the paired tests for the places where the response only said "decreased / increased".
-%  All are two conditions on the same participants, so the per-participant means are paired for the test.
-%
-%    (1) [A2] constant club length vs measured distance
-%    (2) [A6] velocity anchor target 0 vs measured velocity
-%    (3) [A8] magnetometer heading vs aligned heading
-%    (4) [A9] saturation included vs excluded
-%
 %  Output : revision/results/R2_10_pairwise_tests.csv
-%
-%  2026-09-05
-%% ========================================================================
 
 clc; clear; close all;
 thisDir = fileparts(mfilename('fullpath'));
@@ -35,9 +25,8 @@ for k = 1:n
 end
 rows = {};
 
-%% ===== (1) [A2] constant club length vs measured distance =====
+%% (1) [A2] constant club length vs measured distance
 fprintf([NL '===== (1) [A2] constant club length vs measured distance =====' NL]);
-% constraint error
 eC = nan(n,1); eT = nan(n,1); tC = nan(n,4); tT = nan(n,4);
 for k = 1:n
     st = S(k);
@@ -46,8 +35,6 @@ for k = 1:n
     Dref = [r.Dref_x(1) r.Dref_y(1) r.Dref_z(1)];
     Dvid = [r.Dvid_x(1) r.Dvid_y(1) r.Dvid_z(1)];
     eC(k) = norm(Dvid - Dref)/10;
-    % The condition re-solved with the measured distance does not use the value obtained in R2_02;
-    % here only the constraint error is compared (the trajectory is handled below)
     cC = local_correct(st.imu_trajCal, Dvid, st.add, st.imp, st.fin);
     cT = local_correct(st.imu_trajCal, Dref, st.add, st.imp, st.fin);
     for q = 1:4
@@ -61,7 +48,7 @@ for q = 1:4
         tC(:,q), tT(:,q), sj, true(n,1))]; %#ok<AGROW>
 end
 
-%% ===== (2) [A6] velocity anchor =====
+%% (2) [A6] velocity anchor
 fprintf([NL '===== (2) [A6] velocity anchor target 0 vs measured velocity =====' NL]);
 Dml = local_load_Dml(fullfile(ML, 'runs_0112_accgyro_400800_ori7traj2'));
 eZ = nan(n,4); eV = nan(n,4); fs = 200; ts = 1/fs;
@@ -90,7 +77,7 @@ for q = 1:4
         eZ(:,q), eV(:,q), sj, true(n,1))]; %#ok<AGROW>
 end
 
-%% ===== (3) [A8] heading alignment =====
+%% (3) [A8] heading alignment
 fprintf([NL '===== (3) [A8] magnetometer heading vs aligned heading =====' NL]);
 O7 = readtable(fullfile(RES, 'orientation_saturation_trialwise.csv'));
 O8 = readtable(fullfile(RES, 'R2_08_ori8_trialwise.csv'));
@@ -106,9 +93,8 @@ for q = 1:4
         E7(:,q), E8(:,q), (1:10)', true(10,1))]; %#ok<AGROW>
 end
 
-%% ===== (4) [A9] saturation excluded =====
+%% (4) [A9] saturation excluded
 fprintf([NL '===== (4) [A9] saturation included vs excluded =====' NL]);
-% Orientation error: pair saturated and non-saturated trials within the same participant
 both = [];
 for su = unique(O7.subj)'
     if any(O7.isSaturated(O7.subj==su)) && any(~O7.isSaturated(O7.subj==su))
@@ -122,12 +108,12 @@ for q = 1:4
     rows = [rows; local_pair2(sprintf('[A9] orientation error %s (deg), non-saturated vs saturated', SEG{q,1}), a, b)]; %#ok<AGROW>
 end
 
-%% ===== save =====
+%% save
 T = cell2table(rows, 'VariableNames', {'comparison','n','mean1','mean2','diff','t','p'});
 writetable(T, fullfile(RES, 'R2_10_pairwise_tests.csv'));
 fprintf([NL 'saved: results/R2_10_pairwise_tests.csv' NL]);
 
-%% ===== helper functions =====
+%% helper functions
 function traj = local_correct(traj0, D, add, imp, fin)
     traj = traj0; dm = traj0(imp,:) - D;
     for kk = add:fin

@@ -1,14 +1,6 @@
 %% [R2-10] R2_10_bias_origin.m
 %  distinguishes whether the systematic bias on the fore-aft axis comes from the club length assumption or from the 2D wrist detection.
-%
-%  D is re-solved on the same camera ray with only the radius replaced by the motion capture measured distance
-%  (the same procedure as R2_02_true_distance_trajectory.m). If the club length assumption causes the bias,
-%  the per-axis bias should disappear under this condition. If it remains, the cause lies in the 2D detection.
-%
 %  Output : revision/results/R2_10_bias_origin.csv
-%
-%  2026-09-06
-%% ========================================================================
 
 clc; clear; close all;
 thisDir = fileparts(mfilename('fullpath'));
@@ -16,7 +8,6 @@ if isempty(thisDir), thisDir = pwd; end
 RES = fullfile(thisDir, 'results');
 NL  = char(10);
 
-% camera position per participant (same as R2_02_true_distance_trajectory.m)
 T_CAM = [2103.45266617, -187.32518295, 1074.79984244];   % representative value, overwritten below
 run_cam = fullfile(thisDir, 'R2_02_true_distance_trajectory.m');
 txt = fileread(run_cam);

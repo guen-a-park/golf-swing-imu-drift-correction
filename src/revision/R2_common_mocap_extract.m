@@ -1,38 +1,17 @@
 %% [shared] R2_common_mocap_extract.m
 %  extracts and stores, in a single loop, the motion capture based metrics commonly needed for the revision.
-%  ------------------------------------------------------------------------
-%  comments that use this file
-%    R2-2 : actual ball-wrist distance (ADD/IMP), difference from the club length, between-trial variation
-%    R2-6 : wrist velocity at ADD/BST/FIN (per axis + norm)
-%    (can be reused for other comments later)
-%
-%  Note 1) deriv5 name collision
-%    there are two deriv5 files on the MATLAB path.
-%      golfClubHead/GolfSwing_0424/functions/deriv5.m : 5-point formula, result is a ROW vector
-%      Taekwondo/src/deriv5.m                         : 3-point formula, result is a COLUMN vector
-%    depending on which one is picked up, [dot1 dot2 dot3] can be 900x3 or 1x2700, and
-%    the differentiation formula itself differs. So the deriv5 on the path is not used here;
-%    instead the same 5-point formula as the golf project version is implemented directly as local_deriv5.
-%
-%  Note 2) units
-%    marker / *_est are in mm. Positions are stored in mm and velocities in mm/s,
-%    and converted to cm and m/s in the analysis scripts.
-%
 %  Output : revision/results/R2_common_mocap_metrics.mat  (+ .csv)
-%
-%  2026-08-28
-%% ========================================================================
 
 clc; clear; close all;
 
-%% ===== paths =====
+%% paths
 thisDir = fileparts(mfilename('fullpath'));
 if isempty(thisDir), thisDir = pwd; end
 baseDir = fileparts(thisDir);
 OUT_DIR = fullfile(thisDir, 'results');
 if ~isfolder(OUT_DIR), mkdir(OUT_DIR); end
 
-%% ===== settings =====
+%% settings
 subjN = ["S01","S02","S03","S04","S05","S06","S07","S08","S09","S10"];
 clubN = ["driver","iron","fast"];
 CLUBS  = [1 3];
@@ -43,19 +22,17 @@ ts        = 1/apdm_rate;
 cut_freq  = 15;                      % same as the original analysis (swing1127_withml_3d_0304.m)
 [bf, af]  = butter(4, cut_freq/(apdm_rate/2));
 
-% the same values as clublength_3d_1020.m (mm)
 club_length      = [1135 1125 1100 1120 1107 1125 1087 1130 1125 1102];
 club_length_iron = [ 954  922  910  935  907  932  922  927  918  912];
 
-% trials excluded in the original analysis [subj club trial]
-EXCLUDED = [ 1 2  1; 5 3  5; 9 3  8; 8 1 30; 2 1 10; 6 1  3];
+EXCLUDED = [ 5 3  5; 9 3  8; 8 1 30; 2 1 10; 6 1  3];
 TEST_TRIALS = containers.Map({1, 3}, {21:30, 1:10});
 
-%% ===== data loading =====
+%% data loading
 fprintf('Loading swing data...\n');
 load(fullfile(baseDir, 'swingData_2508_aftercal_imp+1_est.mat'), 'swingData_2508');
 
-%% ===== trial loop =====
+%% trial loop
 rows = {};
 for subj = 1:10
     for club = CLUBS
@@ -68,12 +45,10 @@ for subj = 1:10
             add = double(g.add); bst = double(g.bst);
             imp = double(g.imp); fin = min(double(g.fin), 900);
 
-            % --- wrist reference point = midpoint of the upper/lower wrist markers (same as the original analysis) ---
             WristU = g.marker(:,13:15);
             WristL = g.marker(:, 7: 9);
             abs_wrist = (WristU + WristL) ./ 2;          % [900 x 3], mm, ball = origin
 
-            % --- velocity (5-point differentiation then 15 Hz low-pass) ---
             n = size(abs_wrist, 1);
             vel = zeros(n, 3);
             for d = 1:3
@@ -81,7 +56,6 @@ for subj = 1:10
             end
             vel = filtfilt(bf, af, vel);                 % mm/s
 
-            % --- actual ball-wrist distance (the ball is the origin, so the magnitude of the position vector) ---
             L_add = norm(abs_wrist(add,:));
             L_bst = norm(abs_wrist(bst,:));
             L_imp = norm(abs_wrist(imp,:));
@@ -89,8 +63,6 @@ for subj = 1:10
             else,         L_assumed = club_length(subj);
             end
 
-            % --- MotionAGFormer based estimate (same as swing1127_withml_3d_0304.m) ---
-            %     motionag = dl(:,1:3) + com,  com = midpoint of the left/right ASIS markers
             if size(g.dl, 2) >= 3
                 com      = (g.marker(:,1:3) + g.marker(:,4:6)) ./ 2;
                 motionag = g.dl(:,1:3) + com;
@@ -99,7 +71,6 @@ for subj = 1:10
                 D_ag = [NaN NaN NaN];
             end
 
-            % --- constraint D : motion capture reference value / video-based estimate ---
             D_ref = abs_wrist(imp,:) - abs_wrist(add,:);            % mm
             if isfield(g, 'add_est') && isfield(g, 'imp_est') && ...
                all(isfinite(g.add_est)) && all(isfinite(g.imp_est))
@@ -155,12 +126,8 @@ fprintf('\n%d trials extracted (driver %d, fast %d)\n', height(M), ...
 fprintf('saved: %s\n', fullfile(OUT_DIR, 'R2_common_mocap_metrics.csv'));
 fprintf('saved: %s\n', fullfile(OUT_DIR, 'R2_common_mocap_metrics.mat'));
 
-
-%% ===== local functions =====
+%% local functions
 function xdot = local_deriv5(x, h)
-% the same 5-point formula as GolfSwing_0424/functions/deriv5.m.
-% the deriv5 on the path has two implementations whose result orientation (row/column) and formula differ, so
-% it is implemented here directly and always returns a column vector.
     x = x(:);
     n = numel(x);
     xdot = zeros(n, 1);

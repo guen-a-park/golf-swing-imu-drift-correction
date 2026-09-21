@@ -1,30 +1,6 @@
 %% [R2-1] R2_01_target_uncertainty.m
 %  Quantifies how much the uncertainty of the training target (D_Vision) propagates into the final IMU-based correction.
-%  ------------------------------------------------------------------------
-%  Reviewer's original text:
-%    "It should be stated explicitly that D_Vision is an estimated training target
-%     rather than an independent ground truth. Uncertainties from 2D wrist detection,
-%     camera calibration, event identification, and club-length-based reconstruction
-%     propagate into the BiLSTM training target and the final IMU-based correction,
-%     and should be quantified."
-%
-%  The propagation chain is split into three conditions. They differ only in the D used for correction,
-%  everything else (orientation estimation, integration, velocity correction) being identical.
-%
-%    (1) D_ref    : correction with motion capture D  -> lower bound with no target uncertainty at all
-%    (2) D_Vision : correction with video-based D     -> increase over (1) = training target uncertainty
-%    (3) D_Infer  : IMU inferred D                    -> increase over (2) = BiLSTM inference error
-%                                              (3) is the result reported in the manuscript
-%
-%  At impact the error is exactly |D_true - D_used|, and since the correction term is distributed linearly from address
-%  to impact, the downswing-interval mean becomes 0.91 times that.
-%  The table below therefore also shows whether that relation holds in the actual data.
-%
 %  Output : revision/results/R2_01_target_uncertainty.csv        (error by interval)
-%         revision/results/R2_01_target_uncertainty_D.csv      (D own per-axis error)
-%
-%  2026-08-31
-%% ========================================================================
 
 clc; clear; close all;
 
@@ -33,7 +9,7 @@ if isempty(thisDir), thisDir = pwd; end
 baseDir = fileparts(thisDir);
 RES = fullfile(thisDir, 'results');
 
-%% ----- materials --------------------------------------------------------------
+%% materials
 load(fullfile(RES, 'R2_03_traj_store_ori7.mat'), 'R2_03_store');  S = R2_03_store;
 
 M = readtable(fullfile(RES, 'R2_common_mocap_metrics.csv'));
@@ -59,7 +35,7 @@ err  = nan(nS, 4, 3);        % [trial x segment x condition]
 eIMP = nan(nS, 3);           % impact error
 dErr = nan(nS, 3, 3);        % [trial x axis x condition] : D estimation error
 
-%% ----- computation --------------------------------------------------------------
+%% computation
 for k = 1:nS
     st = S(k); subj(k) = st.subj;
 
@@ -82,7 +58,7 @@ for k = 1:nS
     end
 end
 
-%% ----- Table 1. trajectory error by interval -------------------------------------------
+%% Table 1. trajectory error by interval
 rows = {};
 fprintf('\n===== [R2-1] propagation of training target uncertainty (driver test, participant level, cm), cm) =====\n');
 fprintf('%-16s %14s %14s %14s\n', 'Segment', COND{:});
@@ -97,7 +73,6 @@ for r = 1:4
     rows(end+1,:) = {SEG{r,1}, v(1), sd(1), v(2), sd(2), v(3), sd(3), ...
                      v(2)-v(1), v(3)-v(2)}; %#ok<SAGROW>
 end
-% impact
 v = zeros(1,3);
 for c = 1:3
     a = local_agg(eIMP(:,c), subj); v(c) = a(1); sd(c) = a(2);
@@ -114,7 +89,7 @@ writetable(cell2table(rows, 'VariableNames', {'segment', ...
 fprintf('\nincrease: D_Vision - D_ref = training target uncertainty contribution\n');
 fprintf('          D_Infer  - D_Vision = BiLSTM inference error contribution\n');
 
-%% ----- Table 2. per-axis error of D itself -----------------------------------------
+%% Table 2. per-axis error of D itself
 AX = 'XYZ';
 rows2 = {};
 fprintf('\n===== D error relative to motion capture (cm) =====\n');
@@ -128,7 +103,6 @@ for a = 1:3
         AX(a), m2(1), b2(1), m3(1), b3(1));
     rows2(end+1,:) = {AX(a), m2(1), m2(2), b2(1), m3(1), m3(2), b3(1)}; %#ok<SAGROW>
 end
-% magnitude (norm) basis
 n2 = local_agg(vecnorm(squeeze(dErr(:,:,2)),2,2), subj);
 n3 = local_agg(vecnorm(squeeze(dErr(:,:,3)),2,2), subj);
 fprintf('%-10s norm %5.1f ± %4.1f      norm %5.1f ± %4.1f\n', 'total', n2(1), n2(2), n3(1), n3(2));
@@ -142,8 +116,7 @@ writetable(cell2table(rows2, 'VariableNames', ...
 fprintf('\nsaved: %s\n', fullfile(RES, 'R2_01_target_uncertainty.csv'));
 fprintf('saved: %s\n', fullfile(RES, 'R2_01_target_uncertainty_D.csv'));
 
-
-%% ----- local ------------------------------------------------------------
+%% local
 function traj = local_correct(st, D)
     traj = st.imu_trajCal;
     dm   = st.imu_trajCal(st.imp,:) - D;

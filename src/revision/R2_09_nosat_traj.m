@@ -1,13 +1,6 @@
 %% [R2-9] R2_09_nosat_traj.m
 %  Phase-wise trajectory error of a model retrained with saturated trials excluded from both training and evaluation.
-%  Compared against (a) the manuscript model applied to all test trials,
-%              (b) the manuscript model re-aggregated over the remaining 77 trials only.
-%
-%  Prerequisite : R2_09_nosat_Dml_seed{1..5}.csv (generated in python)
 %  Output : revision/results/R2_09_nosat_traj.csv
-%
-%  2026-09-05
-%% ========================================================================
 
 clc; clear; close all;
 thisDir = fileparts(mfilename('fullpath'));
@@ -34,7 +27,6 @@ NL = char(10);
 fprintf([NL '===== [R2-9] retraining result with saturation excluded (cm) =====' NL]);
 fprintf(['Of %d driver test trials, %d saturated, %d remaining' NL NL], n, sum(sat), sum(~sat));
 
-% (a) manuscript model / all,  (b) manuscript model / remaining only
 eA = local_phase(S, Dref, SEG);
 fprintf(['%-24s %10s %10s %10s %10s' NL], 'Condition','Backswing','Downswing','Follow-through','Entire');
 fprintf(['%-24s %10.1f %10.1f %10.1f %10.1f' NL], 'Manuscript model / all 99', ...
@@ -42,7 +34,6 @@ fprintf(['%-24s %10.1f %10.1f %10.1f %10.1f' NL], 'Manuscript model / all 99', .
 fprintf(['%-24s %10.1f %10.1f %10.1f %10.1f' NL], 'Manuscript model / remaining 77', ...
     arrayfun(@(q) local_agg(eA(:,q), sj, ~sat), 1:4));
 
-% (c) retrained model / remaining only, 5 seeds
 V = nan(5,4);
 for s = 1:5
     T = readtable(fullfile(RES, sprintf('R2_09_nosat_Dml_seed%d.csv', s)));
@@ -61,7 +52,7 @@ writetable(array2table(V, 'VariableNames', {'Backswing','Downswing','FollowThrou
     fullfile(RES, 'R2_09_nosat_traj.csv'));
 fprintf(['saved: results/R2_09_nosat_traj.csv' NL]);
 
-%% ===== Helper functions =====
+%% Helper functions
 function e = local_phase(S, Dm, SEG)
     n = numel(S); e = nan(n,4);
     for k = 1:n

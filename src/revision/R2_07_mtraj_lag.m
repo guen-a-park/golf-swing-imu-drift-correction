@@ -1,14 +1,7 @@
 %% [R2-7] R2_07_mtraj_lag.m
 %  Checks the temporal alignment between the mocap reference trajectory (Mtraj) and the IMU integrated trajectory.
-%  The ori0 check revealed that the marker orientation leads the IMU by 2 samples, so
-%  we check whether the reference trajectory has the same misalignment. If it does, every trajectory error reported
-%  so far was computed with a 10 ms offset.
-%
-%  Compares Mtraj(i+k) with traj(i) and finds the k that minimizes the error.
-%
 %  Output : results/R2_07_mtraj_lag.csv
-%  2026-09-01
-%% ========================================================================
+
 clc; clear;
 thisDir = fileparts(mfilename('fullpath'));
 if isempty(thisDir), thisDir = pwd; end

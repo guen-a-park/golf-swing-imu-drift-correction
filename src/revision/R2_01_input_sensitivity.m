@@ -1,12 +1,7 @@
-%% [R2-1 / memo 11] R2_01_input_sensitivity.m
-%  Computes the sensitivity of D_Vision to each of the four error sources listed by the reviewer.
-%  2D detection and camera calibration have no reference value, so their error magnitude cannot be measured directly.
-%  Instead, as in R2-2 where club length was answered with dD/dL,
-%  we report how much D changes when each input is perturbed by a unit amount.
-%
+%% [R2-1] R2_01_input_sensitivity.m
+%  Sensitivity of D_Vision to each of the four error sources considered.
 %  Output : results/R2_01_input_sensitivity.csv
-%  2026-09-01
-%% ========================================================================
+
 clc; clear;
 
 thisDir = fileparts(mfilename('fullpath'));
@@ -40,7 +35,6 @@ club_length = [1135 1125 1100 1120 1107 1125 1087 1130 1125 1102];
 
 load(fullfile(baseDir, 'swingData_2508_aftercal_imp+1_est.mat'), 'swingData_2508');
 
-% perturbation list : {name, category, type, magnitude}
 PERT = { '2D wrist detection, 1 px (both events, same direction)', 'detection', 'uv_common', 1
          '2D wrist detection, 1 px (two events, opposite direction)', 'detection', 'uv_opp',  1
          'Principal point, 1 px',            'calibration', 'pp',   1
@@ -110,7 +104,6 @@ writetable(cell2table(rows, 'VariableNames', {'perturbation','source','dD_cm'}),
     fullfile(thisDir, 'results', 'R2_01_input_sensitivity.csv'));
 fprintf('\nNote : total error of D_Vision vs motion capture 8.9 cm, club length assumption contributes 6.1 cm\n');
 fprintf('saved: results/R2_01_input_sensitivity.csv\n');
-
 
 function D = local_D(pa, pi, R2w, Tw, L, K)
     D = local_rec(pi, R2w, Tw, L, K) - local_rec(pa, R2w, Tw, L, K);

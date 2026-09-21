@@ -1,17 +1,6 @@
 %% [R2-30] R2_30_table_precision.m
-%  Reviewer 2, Comment 30 (numerical precision) response.
-%  ------------------------------------------------------------------------
-%  Reviewer request : orientation error to 1 decimal place; cm-unit trajectory error must not imply sub-mm precision.
-%  This script recomputes the Table 2 / Table 3 values at full precision before rounding and
-%  fixes the 1-decimal reported values (especially entries ending in x.x5 where the rounding direction is ambiguous).
-%
-%  Input : results/R2_03_traj_store_ori7.mat  (imu_trajCal, Mtraj, event indices)
-%         multimodal/runs_0112_accgyro_400800_ori7traj2  (ML model adopted in the manuscript)
+%  Recomputes the reported table values at full precision before rounding.
 %  Output : results/R2_30_table2_precision.csv
-%         results/R2_30_table3_precision.csv
-%
-%  2026-08-30
-%% ========================================================================
 
 clc; clear; close all;
 
@@ -64,7 +53,7 @@ for k = 1:nS
     end
 end
 
-%% ----- Table 2 -----------------------------------------------------------
+%% Table 2
 rows = {};
 fprintf('\n===== [R2-30] Table 2, full precision (cm) =====\n');
 for e = 1:3
@@ -80,7 +69,7 @@ writetable(cell2table(rows, 'VariableNames', ...
     {'event','axis','proposed_mean','proposed_sd','uncorrected_mean','uncorrected_sd'}), ...
     fullfile(RES, 'R2_30_table2_precision.csv'));
 
-%% ----- Table 3 -----------------------------------------------------------
+%% Table 3
 rows = {};
 fprintf('\n===== [R2-30] Table 3, full precision (cm) =====\n');
 for r = 1:4
@@ -92,7 +81,6 @@ writetable(cell2table(rows, 'VariableNames', {'segment','mean','sd'}), ...
     fullfile(RES, 'R2_30_table3_precision.csv'));
 
 fprintf('\nsaved to %s\n', RES);
-
 
 function m = local_agg(v, subj)
     su = unique(subj);

@@ -1,25 +1,6 @@
 %% [R2-8] R2_08_orientation_error.m  (R2_09 Part 3 extended for heading condition comparison)
-%  Reviewer 2, Comment R2-9 response, integrated script
-%  ------------------------------------------------------------------------
-%  R2-9 requirements
-%    (1) State the gyroscope measurement range (full-scale range, FSR)
-%    (2) Define the saturation criterion quantitatively
-%    (3) Report the number of saturated trials per participant / condition
-%    (4) Re-analysis after excluding saturated trials
-%
-%  Structure (select the parts to run with RUN_PARTS)
-%    Part 1. Saturation detection           raw h5 scan -> apply criteria -> per-participant table + exclusion mask
-%    Part 2. Example figure           normal vs saturated raw gyro comparison (for the review response)
-%    Part 3. Orientation error check  Figure 4 redrawn + phase-wise (Table 3 format) error comparison
-%
-%  Part 3 needs the Part 1 result (satFlag). If Part 1 was run in the same session,
-%  the in-memory value is used, otherwise results/gyro_saturation_mask.mat is read.
-%
+%  Orientation error by swing phase, compared between heading conditions.
 %  Output : revision/results/
-%  Interpretation : revision/analysis/README_gyro_saturation.md
-%
-%  2026-08-28
-%% ========================================================================
 
 clc; close all;
 set(groot, 'defaultAxesFontSize', 14);
@@ -28,7 +9,7 @@ RUN_PARTS = 3;   % [R2-8] run Part 3 only
 R2_08_HEADING_ALIGNED = true;   %% <<< false = ori7 (magnetometer), true = ori8 (motion capture yaw)
 R2_08_tag = sprintf('R2_08_ori%d_', 7 + R2_08_HEADING_ALIGNED);
 
-%% ===== Common settings =========================================================
+%% Common settings
 IMU_ROOT = fullfile(dataRoot(), 'imu');
 
 thisDir = fileparts(mfilename('fullpath'));
@@ -47,47 +28,25 @@ apdm_rate = 200;
 
 maskFile = fullfile(OUT_DIR, 'gyro_saturation_mask.mat');
 
-%% ----- Saturation criteria ----------------------------------------------------
-%  C1) Range clipping : the APDM Opal SI gyro output is clipped at exactly +-35.0000 rad/s
-%      (= +-2005.4 deg/s, nominal FSR +-2000 deg/s). In this dataset
-%      trials actually clipped at |w| = 35.0000 rad/s exist, so this value is used as the FSR.
-%  C2) Sign inversion from exceeding the range (range overflow / sign fold) :
-%      when the angular velocity exceeds the FSR the sample is folded to the opposite sign,
-%      producing a physically impossible step between consecutive samples.
-%      the measured distribution of this dataset is completely bimodal:
-%        - non-saturated trials, max |dw| : 13.99 rad/s/sample (= 2798 rad/s^2)
-%        - saturated   trials, min |dw| : 18.72 rad/s/sample (= 3745 rad/s^2)
-%      so an empty gap exists. The threshold is set to 15 rad/s/sample, in between.
+%% Saturation criteria
 FSR        = 35.0;      % [rad/s] gyro measurement range (one-sided)
 CLIP_RATIO = 0.99;      % C1 threshold ratio
 JUMP_TH    = 15.0;      % [rad/s / sample] C2 threshold (200 Hz -> 3000 rad/s^2)
 
-% detection/analysis window (relative to impact). Same as the BiLSTM input window in the paper
 WIN_PRE  = 1.5;
 WIN_POST = 0.5;
 
-%% ----- Dataset exceptions -----------------------------------------------------
-% trials already excluded in the main analysis (swing1127_withml_3d_0304.m) [subj club trial]
-EXCLUDED = [ 1 2  1;   % apdm recording error
-             5 3  5;   % cannot be derived from video
-             9 3  8;   % apdm NaN
+%% Dataset exceptions
+EXCLUDED = [ 5 3  5;   % IMU recording error
+             9 3  8;   % IMU value comes out NaN
              8 1 30;   % magnetometer measurement error
-             2 1 10;   % no pelvis marker
-             6 1  3];  % no pelvis marker
+             2 1 10;   % IMU recording error
+             6 1  3];  % IMU recording error
 
-% train/test split (driver 1~20 = calibration/train, 21~30 = test, fast 1~10 = test)
 TRAIN_TRIALS = containers.Map({1, 3}, {1:20, []});
 TEST_TRIALS  = containers.Map({1, 3}, {21:30, 1:10});
 
-
-%% ========================================================================
 %% Part 1.  Saturation detection
-%% ------------------------------------------------------------------------
-%  Important: detection must be performed on the original h5 (raw, unfiltered).
-%        the apdm signals stored in swingData_2508*.mat have passed a 15 Hz low-pass filter,
-%        so the discontinuity of the saturated segment is already smoothed out and detection is impossible.
-%        (e.g. S05 driver trial 8 -> raw 29.79 rad/s + sign inversion, stored 16.68 rad/s)
-%% ========================================================================
 if ismember(1, RUN_PARTS)
 fprintf('\n########## Part 1. Saturation detection ##########\n');
 
@@ -108,7 +67,6 @@ for subj = 1:numel(subjN)
         for trial = 1:ntr
             fp = fullfile(p, f(trial).name);
 
-            % --- sensor ID / sampling rate ---
             si = h5info(fp, '/Sensors');
             id = si.Groups(1).Name;
             id = id(find(id == '/', 1, 'last') + 1 : end);
@@ -121,7 +79,6 @@ for subj = 1:numel(subjN)
             g = h5read(fp, ['/Sensors/' id '/Gyroscope'])';   % [n x 3], rad/s, raw
             n = size(g, 1);
 
-            % --- window around impact (one swing per file, |w| peak = impact) ---
             [~, pkIdx] = max(max(abs(g), [], 2));
             i0 = max(1, pkIdx - round(WIN_PRE  * fs));
             i1 = min(n, pkIdx + round(WIN_POST * fs));
@@ -171,7 +128,7 @@ Tsat = cell2table(rows, 'VariableNames', { ...
     'flagClip', 'flagOverflow', 'isSaturated'});
 writetable(Tsat, fullfile(OUT_DIR, 'gyro_saturation_trialwise.csv'));
 
-%% ----- participant x condition summary -----
+%% participant x condition summary
 srows = {};
 for subj = 1:numel(subjN)
     for club = CLUBS
@@ -188,7 +145,7 @@ Ssat = cell2table(srows, 'VariableNames', { ...
     'nTest', 'nTestSaturated', 'pctTestSaturated', 'peakOmega', 'nClipTrial', 'nOverflowTrial'});
 writetable(Ssat, fullfile(OUT_DIR, 'gyro_saturation_summary.csv'));
 
-%% ----- save exclusion mask (directly usable by the existing analysis code) -----
+%% save exclusion mask (directly usable by the existing analysis code)
 satFlag = struct('name', num2cell(subjN(:)));
 for subj = 1:numel(subjN)
     for club = 1:3
@@ -203,7 +160,7 @@ satCriteria = struct('FSR_rad_s', FSR, 'FSR_deg_s', FSR*180/pi, ...
     'jumpThreshold_rad_s2', JUMP_TH*apdm_rate, 'window_s', [-WIN_PRE WIN_POST]);
 save(maskFile, 'satFlag', 'satCriteria', 'Tsat', 'Ssat');
 
-%% ----- console summary (for writing the paper text/tables) -----
+%% console summary (for writing the paper text/tables)
 fprintf('\nFull-scale range  : +-%.1f rad/s (= +-%.0f deg/s, nominal +-2000 deg/s)\n', FSR, FSR*180/pi);
 fprintf('C1 range clipping : |w_axis| >= %.2f rad/s (%.0f%% of FSR), >=1 sample\n', CLIP_RATIO*FSR, CLIP_RATIO*100);
 fprintf('C2 range overflow : |dw| >= %.1f rad/s per sample (= %.0f rad/s^2 at %d Hz), >=1 sample\n', ...
@@ -258,14 +215,7 @@ fprintf('saved: %s\n', fullfile(OUT_DIR, 'gyro_saturation_summary.csv'));
 fprintf('saved: %s\n', maskFile);
 end % Part 1
 
-
-%% ========================================================================
 %% Part 2.  Example figure (normal vs saturated raw gyro)
-%% ------------------------------------------------------------------------
-%  adjacent trials of the same participant (S05, driver) are compared to rule out individual differences.
-%    trial 10 (normal) : single peak just before impact, max |w| 33.99 rad/s (within FSR)
-%    trial  8 (saturated) : sign inversion where the FSR is exceeded, jump over 30 rad/s between samples
-%% ========================================================================
 if ismember(2, RUN_PARTS)
 fprintf('\n########## Part 2. Example figure ##########\n');
 
@@ -307,24 +257,7 @@ saveas(figure(4000), fullfile(OUT_DIR, 'fig_gyro_saturation_example.svg'));
 fprintf('saved: %s\n', fullfile(OUT_DIR, 'fig_gyro_saturation_example.png'));
 end % Part 2
 
-
-%% ========================================================================
 %% Part 3.  Effect of saturation on orientation error
-%% ------------------------------------------------------------------------
-%  "Is the increase of orientation error near impact caused by gyro-saturated trials?"
-%
-%  uses the computation part of draw_orientation_plot.m as is, with
-%    (a) all trials      (All trials, manuscript Figure 4)
-%    (b) saturated excluded (Saturation excluded)
-%    (c) saturated only    (Saturated only)
-%  Figure 4 is redrawn for the three groups and phase-wise errors are compared in manuscript Table 3 format.
-%
-%  phase definitions are the same as manuscript Table 3 (range_defs in draw_figure4_m0_m5_m4_m6.m):
-%     Backswing ADD->BST / Downswing BST->IMP / Follow-through IMP->FIN / Entire ADD->FIN
-%  two aggregations are reported.
-%     - participant level : per-participant mean -> between-participant mean ± SD  (same as manuscript, main table)
-%     - trial level : between-trial mean ± SD               (reference)
-%% ========================================================================
 if ismember(3, RUN_PARTS)
 fprintf('\n########## Part 3. Orientation error impact check ##########\n');
 
@@ -339,7 +272,7 @@ gray_all = [0.45 0.45 0.45];     % all trials
 sat_blue = [ 31 119 180]/255;    % saturated trials only
 event_line_color = [0 0 0];
 
-%% ----- load data -----
+%% load data
 if ~exist('satFlag', 'var')      % when Part 1 was not run in the same session
     if ~isfile(maskFile)
         error('%s not found. Include 1 in RUN_PARTS and run Part 1 first.', maskFile);
@@ -357,7 +290,7 @@ angle_error_axis_all = [];    % [900 x 3 x nTrial]
 isSat_list = []; subj_list = []; trial_list = [];
 add_list = []; bst_list = []; imp_list = []; fin_list = [];
 
-%% ----- main loop (same as draw_orientation_plot.m) -----
+%% main loop (same as draw_orientation_plot.m)
 fprintf('Processing trials...\n');
 z = 1;
 for subj = 1:10
@@ -380,7 +313,7 @@ for subj = 1:10
         g.fin = double(g.fin);
         if g.fin > 900, g.fin = 900; end
 
-        %% marker data
+%% marker data
         WristU = g.marker(:,13:15);
         WristM = g.marker(:,10:12);
         WristL = g.marker(:, 7: 9);
@@ -389,7 +322,7 @@ for subj = 1:10
         gyro_data = g.apdm(:,4:6);
         m_cal     = g.apdm(:,7:9);
 
-        %% R2Lw (marker-based orientation)
+%% R2Lw (marker-based orientation)
         Cw = (WristU + WristL) ./ 2;
         Lo = WristL - Cw;
         Mo = WristM - Cw;
@@ -433,7 +366,7 @@ for subj = 1:10
             end
         end
 
-        %% initial orientation (OrientationMethod = 7)
+%% initial orientation (OrientationMethod = 7)
         local_frame = R2Lw(:,:,g.add);
         yaw_marker  = rad2deg(atan2(local_frame(2,1), local_frame(1,1)));
 
@@ -454,8 +387,7 @@ for subj = 1:10
         alpha_deg   = rad2deg(atan2(myh, mxh));
         yaw_imu_deg = mod(psi0_deg - alpha_deg + 180, 360) - 180;
         psi = deg2rad(yaw_imu_deg);
-        %% [R2-8] heading-aligned condition: replace only yaw with the motion capture reference
-        %  roll, pitch keep the accelerometer estimate (preserves the typical IMU error level)
+%% [R2-8] heading-aligned condition: replace only yaw with the motion capture reference
         if R2_08_HEADING_ALIGNED
             psi = deg2rad(yaw_marker);
         end
@@ -468,7 +400,7 @@ for subj = 1:10
         Rz = [cos(psi) -sin(psi) 0; sin(psi) cos(psi) 0; 0 0 1];
         R2tri = Rz * Ry * Rx * eye(3);
 
-        %% Orientation integration
+%% Orientation integration
         Rinf = get_orientation_apdm(time, acc_data, gyro_data, g.add, R2tri);
 
         qinf = zeros(length(time), 4);
@@ -479,7 +411,7 @@ for subj = 1:10
             end
         end
 
-        %% Angle error (quaternion, Figure 4)
+%% Angle error (quaternion, Figure 4)
         angle_error = zeros(length(time), 1);
         for i = 1:length(time)
             qprod   = quaternProd(quaternConj(qinf(i,:)), R2Lwq(i,:));
@@ -488,7 +420,7 @@ for subj = 1:10
             angle_error(i) = tempAng;
         end
 
-        %% 3-axis angle error (Euler)
+%% 3-axis angle error (Euler)
         angle_error_axis = zeros(length(time), 3);
         for i = 1:length(time)
             R_diff = Rinf(:,:,i) * R2Lw(:,:,i)';
@@ -496,7 +428,7 @@ for subj = 1:10
             angle_error_axis(i,:) = [rad2deg(eul(3)), rad2deg(eul(2)), rad2deg(eul(1))];
         end
 
-        %% save
+%% save
         angle_error_all(:, z)       = angle_error;        %#ok<SAGROW>
         angle_error_axis_all(:,:,z) = angle_error_axis;   %#ok<SAGROW>
         isSat_list(z,1) = satFlag(subj).clubN(club).trialN(trial); %#ok<SAGROW>
@@ -514,7 +446,7 @@ isSat_list = logical(isSat_list);
 fprintf('Total %d trials (saturated %d, non-saturated %d)\n', ...
     nTrial, sum(isSat_list), sum(~isSat_list));
 
-%% ----- per-trial phase errors (Table 3 format) -----
+%% per-trial phase errors (Table 3 format)
 phaseNames = {'Backswing', 'Downswing', 'FollowThrough', 'EntireSwing'};
 eventNames = {'ADD', 'BST', 'IMP', 'FIN'};
 
@@ -535,13 +467,13 @@ Ttrial = table(subj_list, string(subjN(subj_list))', trial_list, isSat_list, ...
     'errADD', 'errBST', 'errIMP', 'errFIN'});
 writetable(Ttrial, fullfile(OUT_DIR, [R2_08_tag 'trialwise.csv']));
 
-%% ----- group definitions -----
+%% group definitions
 grpMask  = {true(nTrial,1), ~isSat_list, isSat_list};
 grpNames = {'All trials', 'Saturation excluded', 'Saturated only'};
 allSeg    = [phaseErr eventErr];
 segLabels = [phaseNames, cellfun(@(x) ['@' x], eventNames, 'UniformOutput', false)];
 
-%% ----- trial-level aggregation + between-group t-test -----
+%% trial-level aggregation + between-group t-test
 rows = {};
 for m = 1:size(allSeg, 2)
     v = allSeg(:, m);
@@ -559,11 +491,7 @@ Tphase = cell2table(rows, 'VariableNames', {'segment', ...
     'sat_mean', 'sat_sd', 'sat_n', 'p_excl_vs_sat'});
 writetable(Tphase, fullfile(OUT_DIR, [R2_08_tag 'phase_table.csv']));
 
-%% ----- participant-level aggregation (same scheme as the manuscript values) -----
-%  the "13.75 +- 3.83 deg"(entire swing), "11.00 +- 3.99 deg"(address) in the manuscript Results are
-%  not trial level; the per-participant mean is taken first, then aggregated as between-participant mean +- SD.
-%  (trial-level aggregation gives the same mean with a larger SD: 13.71 +- 5.05)
-%  this aggregation reflects the repeated-measures structure and matches the R2-10 response.
+%% participant-level aggregation (same scheme as the manuscript values)
 subjRows = {};
 for m = 1:size(allSeg, 2)
     r = {segLabels{m}};
@@ -584,7 +512,7 @@ TphaseSubj = cell2table(subjRows, 'VariableNames', {'segment', ...
     'sat_mean', 'sat_sd', 'sat_nSubj'});
 writetable(TphaseSubj, fullfile(OUT_DIR, [R2_08_tag 'phase_table_subjectlevel.csv']));
 
-%% ----- console output -----
+%% console output
 fprintf('\n=========== Orientation error by swing phase (deg) ===========\n');
 fprintf('Gyro saturation criterion : FSR +-%.1f rad/s, |dw| >= %.0f rad/s/sample\n', ...
     satCriteria.FSR_rad_s, satCriteria.jumpThreshold_rad_s_per_sample);
@@ -623,9 +551,7 @@ for s = 1:10
     fprintf('  %-5s : %2d / %2d%s\n', subjN(s), n_ok, n_all, flag);
 end
 
-%% ----- Within-subject comparison (removes participant mixing) -----
-%  the group comparison above has a different participant composition (e.g. all 10 trials of S01 are saturated).
-%  only participants that have both saturated and non-saturated trials are compared within participant.
+%% Within-subject comparison (removes participant mixing)
 bothSubj = [];
 for s = 1:10
     if any(subj_list == s & isSat_list) && any(subj_list == s & ~isSat_list)
@@ -654,12 +580,12 @@ Tws = cell2table(wsRows, 'VariableNames', {'segment', ...
     'nonsat_mean', 'nonsat_sd', 'sat_mean', 'sat_sd', 'diff', 'p_paired', 'nSubj'});
 writetable(Tws, fullfile(OUT_DIR, [R2_08_tag 'withinsubject.csv']));
 
-%% ----- event means (for vertical lines) -----
+%% event means (for vertical lines)
 ev = @(v, msk) mean(v(msk), 'omitnan');
 mskE = ~isSat_list;
 event_mean = [ev(add_list, mskE), ev(bst_list, mskE), ev(imp_list, mskE), ev(fin_list, mskE)];
 
-%% ----- Figure : quaternion angle error (manuscript Figure 4 redrawn) -----
+%% Figure : quaternion angle error (manuscript Figure 4 redrawn)
 tf = 1:max_frames;
 figure(4001); clf;
 set(gcf, 'Color', 'w', 'Position', [100, 200, 640, 300]); hold on; grid on;
@@ -684,7 +610,7 @@ legend(hs(isgraphics(hs)), grpNames(isgraphics(hs)), 'Location', 'northwest', 'B
 title('Orientation error - effect of gyroscope saturation');
 set(gca, 'FontSize', 13);
 
-%% ----- Figure : 3-axis angle error -----
+%% Figure : 3-axis angle error
 figure(4002); clf;
 set(gcf, 'Color', 'w', 'Position', [760, 100, 640, 560]);
 axisLabel = {'X (Roll)', 'Y (Pitch)', 'Z (Yaw)'};
@@ -727,10 +653,8 @@ end % Part 3
 
 fprintf('\n[R2-9] done.\n');
 
-
-%% ===== Local functions =========================================================
+%% Local functions
 function local_plot_trial(g, pkIdx, fs, sname, cname, trial, FSR)
-% for Part 1 visual verification : raw gyro of trials flagged as saturated
     i0 = max(1, pkIdx - round(0.15*fs));
     i1 = min(size(g, 1), pkIdx + round(0.15*fs));
     t  = ((i0:i1) - pkIdx) / fs * 1000;
@@ -743,7 +667,6 @@ function local_plot_trial(g, pkIdx, fs, sname, cname, trial, FSR)
 end
 
 function local_set_time_axis(axHandle, fs)
-% converts the frame axis (impact = 700) into second labels relative to impact
     ticksFrame = 200:100:900;
     set(axHandle, 'XTick', ticksFrame);
     set(axHandle, 'XTickLabel', arrayfun(@(v) sprintf('%.1f', (v-700)/fs), ...

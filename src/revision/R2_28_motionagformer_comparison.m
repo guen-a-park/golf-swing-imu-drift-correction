@@ -1,26 +1,6 @@
 %% [R2-28] R2_28_motionagformer_comparison.m
-%  Reviewer 2, Comment R2-28 response (+ generates the Hotelling-Williams input for R2-10 (e))
-%  ------------------------------------------------------------------------
-%  Comment: do not only say "improved linearity"; state the absolute error alongside.
-%        (the sentence stating that the proposed video method raised X-axis linearity from 0.37 -> 0.72
-%         over MotionAGFormer must also state what the absolute error is)
-%
-%  Computed     : for the estimation of constraint D (wrist displacement at impact relative to address)
-%    (1) per-axis MAE / RMSE / bias  — proposed video method vs MotionAGFormer
-%    (2) per-axis Pearson R (pooled / within-participant rm-corr) rm-corr)
-%    (3) correlation r23 between the two methods -> Hotelling-Williams test
-%        (actually tests the manuscript's claim of a "significant improvement from 0.37 -> 0.72")
-%
-%  MotionAGFormer estimate is computed as in swing1127_withml_3d_0304.m by
-%    motionag = dl(:,1:3) + com,   com = (rias + lias)/2
-%  and the values that R2_common_mocap_extract.m stored as Dag_* are used.
-%
-%  Prerequisite : R2_common_mocap_extract.m
+%  Comparison with MotionAGFormer on error-based accuracy metrics.
 %  Output       : revision/results/R2_28_method_comparison.csv
-%              revision/results/R2_28_hotelling_williams.csv
-%
-%  2026-08-28
-%% ========================================================================
 
 clc; clear; close all;
 
@@ -48,11 +28,9 @@ rows = {}; hwrows = {};
 for d = 1:3
     x = ref(:,d); y1 = vid(:,d); y2 = ag(:,d);
 
-    % --- participant-level error metrics ---
     [mae1, rmse1, bias1] = local_err(x, y1, subj, subjList);
     [mae2, rmse2, bias2] = local_err(x, y2, subj, subjList);
 
-    % --- correlation ---
     r12 = corr(x, y1);            % mocap vs proposed
     r13 = corr(x, y2);            % mocap vs AGFormer
     r23 = corr(y1, y2);           % between the two estimation methods
@@ -64,7 +42,6 @@ for d = 1:3
         mae2(1), mae2(2), rmse2(1), rmse2(2), bias2(1), bias2(2), r13, rm13, ...
         r23, nS, nT}; %#ok<SAGROW>
 
-    % --- Hotelling-Williams : both trial-based n and participant-based n ---
     [t1, p1, df1] = hotelling_williams(r12, r13, r23, nT);
     [t2, p2, df2] = hotelling_williams(r12, r13, r23, nS);
     hwrows(end+1,:) = {axesName{d}, r12, r13, r23, nT, t1, df1, p1, nS, t2, df2, p2}; %#ok<SAGROW>
@@ -80,7 +57,7 @@ H = cell2table(hwrows, 'VariableNames', {'axis','r_prop','r_ag','r_between', ...
     'n_trial','t_trial','df_trial','p_trial','n_subj','t_subj','df_subj','p_subj'});
 writetable(H, fullfile(OUT_DIR, 'R2_28_hotelling_williams.csv'));
 
-%% ===== console =====
+%% console
 fprintf('\n--- accuracy (participant-level mean ± SD, cm) mean ± SD, cm) ---\n');
 fprintf('%-5s | %-34s | %-34s\n', 'Axis', 'proposed video method', 'MotionAGFormer');
 fprintf('%-5s | %10s %10s %10s | %10s %10s %10s\n', '', 'MAE', 'RMSE', 'bias', 'MAE', 'RMSE', 'bias');
@@ -111,10 +88,8 @@ fprintf('When reporting, also present the conservative result based on the numbe
 fprintf('\nsaved: %s\n', fullfile(OUT_DIR, 'R2_28_method_comparison.csv'));
 fprintf('saved: %s\n', fullfile(OUT_DIR, 'R2_28_hotelling_williams.csv'));
 
-
-%% ===== functions =====
+%% functions
 function [mae, rmse, bias] = local_err(x, y, subj, subjList)
-% compute per-participant metrics first, then mean and SD across participants mean, SD
     nS = numel(subjList);
     a = nan(nS,1); r = nan(nS,1); b = nan(nS,1);
     for si = 1:nS
@@ -126,7 +101,6 @@ function [mae, rmse, bias] = local_err(x, y, subj, subjList)
 end
 
 function r = local_rmcorr(x, y, subj, subjList)
-% repeated-measures correlation : correlation after removing participant means
     xc = x; yc = y;
     for si = 1:numel(subjList)
         k = subj == subjList(si);
@@ -137,7 +111,6 @@ function r = local_rmcorr(x, y, subj, subjList)
 end
 
 function [t, p, df] = hotelling_williams(r12, r13, r23, n)
-% Williams(1959) / Steiger(1980) : test of the difference between two correlations sharing common variable 1
     R  = 1 - r12^2 - r13^2 - r23^2 + 2*r12*r13*r23;
     rb = (r12 + r13) / 2;
     df = n - 3;

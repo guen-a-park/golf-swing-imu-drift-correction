@@ -1,15 +1,9 @@
-
 clc; clear all; close all;
-
 
 apdm_path = fullfile(dataRoot(), 'pilot', '260109pilot', '20260109_imu_pilot');
 apdm_files = dir(fullfile(apdm_path, '*.h5'));
-% sort by creation time (ascending - oldest first)
 [~, idx] = sort([apdm_files.datenum]);
 apdm_files = apdm_files(idx);
-
-% 8~13, 11 excluded
-% 5~10s averaged: mean & standard deviation of the 5 values
 
 cut_freq = 15;
 apdm_rate = 200;
@@ -25,7 +19,6 @@ for trial=[8 9 10 12 13]
     q_apdm.golf.gyro.y, q_apdm.golf.gyro.z, q_apdm.golf.magnet.x, q_apdm.golf.magnet.y, q_apdm.golf.magnet.z];
     
 
-    %the mean of this needs to be derived
     offset_mean = [];
     for i = 1001:2000
         offset = rad2deg(atan2(apdm_data(i,8),apdm_data(i,7)));
@@ -43,8 +36,6 @@ std(mean_list)
 mean(trial_offset_mean)
 std(trial_offset_mean)
 
-
-
 function [q, t0_out] = load_APDM(h5_path, apdm_rate, cut_freq, t0_in)
 
 if nargin < 4
@@ -61,7 +52,6 @@ for i = 1:length(deviceID)
         name = h5readatt(h5_path, ['/Sensors/', id, '/Configuration'], 'Label 0');
     catch ME
         if strcmp(ME.identifier,  'MATLAB:imagesci:hdf5lib:libraryError')
-            % id of a device not included
             continue
         else
             rethrow(ME)
@@ -70,25 +60,13 @@ for i = 1:length(deviceID)
     name = name(isletter(name));
     name = lower(name);
 
-
-
-    %0430 for raw data processing
     raw_acc_ = h5read(h5_path, ['/Sensors/', id, '/Accelerometer'])';
     gyro_ = h5read(h5_path, ['/Sensors/', id, '/Gyroscope'])';
-    %0703 magnetometer
     mag_ = h5read(h5_path, ['/Sensors/', id, '/Magnetometer'])';
 
-
-    % %% 1019 filtering applied for now to identify the instant
-    % raw_acc_ = filtfilt(b, a, raw_acc_);
-    % gyro_ = filtfilt(b, a, gyro_);
-    % mag_ = filtfilt(b, a, mag_);
-
     quat_ = h5read(h5_path, ['/Processed/', id, '/Orientation'])';
-    % acc_ = filtfilt(b, a, quatrotate(quat_, quatrotate(quatinv(quat_), local_acc_) - [0, 0, 9.81]));
 
     q.(name).rawacc = struct('x', raw_acc_(:, 1), 'y', raw_acc_(:, 2), 'z', raw_acc_(:, 3));
-    % q.(name).acc = struct('x', acc_(:, 1), 'y', acc_(:, 2), 'z', acc_(:, 3));
     q.(name).gyro = struct('x', gyro_(:, 1), 'y', gyro_(:, 2), 'z', gyro_(:, 3));
     q.(name).magnet = struct('x', mag_(:, 1), 'y', mag_(:, 2), 'z', mag_(:, 3));
 

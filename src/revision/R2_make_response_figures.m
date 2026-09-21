@@ -1,23 +1,6 @@
 %% R2_make_response_figures.m
 %  Generates the figures to attach to the point-by-point response, in the manuscript format.
-%  ------------------------------------------------------------------------
-%  Manuscript format (based on draw_figure5.m / draw_orientation_plot.m)
-%    font         Gill Sans MT, 14 pt
-%    proposed     dark red [128 0 32]/255
-%    reference    black, shading gray 0.70
-%    shade alpha  0.18 (proposed) / 0.16 (reference)
-%    line width   1.6
-%    background   white, no grid, no box
-%    save         PNG(300 dpi) + SVG(vector)
-%
-%  These figures are not part of the manuscript body; they are attached only to the reviewer response.
-%  (the R2-8 figure could also be considered for the main text)
-%
-%  Prerequisite: each analysis script must already have produced its CSV/MAT in revision/results/.
 %  Output: revision/results/response_figures/RespFig*.png, .svg
-%
-%  2026-08-30
-%% ========================================================================
 
 clc; clear; close all;
 
@@ -27,7 +10,7 @@ RES = fullfile(thisDir, 'results');
 OUT = fullfile(RES, 'response_figures');
 if ~isfolder(OUT), mkdir(OUT); end
 
-%% ===== manuscript format constants =====
+%% manuscript format constants
 S.font      = 'Gill Sans MT';
 S.fs        = 14;
 S.prop      = [128 0 32]/255;      % proposed method / main condition
@@ -40,9 +23,7 @@ S.lw        = 1.6;
 
 fprintf('generating response figures in the manuscript format\n');
 
-%% ========================================================================
 %% RespFig 1 — [R2-1] constraint error versus video frame rate
-%% ========================================================================
 f = fullfile(RES, 'R2_01_fps_from_csv_summary.csv');
 if isfile(f)
     T = readtable(f);
@@ -65,9 +46,7 @@ if isfile(f)
     fprintf('  RespFig1 (R2-1) frame rate\n');
 end
 
-%% ========================================================================
 %% RespFig 2 — [R2-2] actual ball-wrist distance vs assumed club length
-%% ========================================================================
 f = fullfile(RES, 'R2_02_ball_wrist_distance.csv');
 if isfile(f)
     T = readtable(f);
@@ -107,9 +86,7 @@ if isfile(f)
     fprintf('  RespFig2 (R2-2) ball-wrist distance\n');
 end
 
-%% ========================================================================
 %% RespFig 3 — [R2-6] trajectory error propagation from violating the zero-velocity assumption
-%% ========================================================================
 f = fullfile(RES, 'R2_06b_zero_velocity_propagation.csv');
 if isfile(f)
     T = readtable(f);
@@ -140,9 +117,7 @@ if isfile(f)
     fprintf('  RespFig3 (R2-6) zero-velocity assumption propagation\n');
 end
 
-%% ========================================================================
 %% RespFig 4 — [R2-9] actual form of gyro saturation (sign inversion)
-%% ========================================================================
 IMU_ROOT = fullfile(dataRoot(), 'imu');
 FSR = 35.0;
 CASES = {'S05','driver',10,'Non-saturated'; 'S05','driver',8,'Saturated'};
@@ -181,9 +156,7 @@ if isfolder(fullfile(IMU_ROOT, 'S05', 'driver'))
     fprintf('  RespFig4 (R2-9) gyro saturation\n');
 end
 
-%% ========================================================================
 %% RespFig 5 — [R2-8] orientation error by segment before and after heading alignment
-%% ========================================================================
 f7 = fullfile(RES, 'R2_08_ori7_phase_table_subjectlevel.csv');
 f8 = fullfile(RES, 'R2_08_ori8_phase_table_subjectlevel.csv');
 if isfile(f7) && isfile(f8)
@@ -215,9 +188,7 @@ if isfile(f7) && isfile(f8)
     fprintf('  RespFig5 (R2-8) heading alignment\n');
 end
 
-%% ========================================================================
 %% RespFig 6 — [R2-10] Bland-Altman (video-based constraint vs motion capture)
-%% ========================================================================
 f = fullfile(RES, 'R2_common_mocap_metrics.mat');
 if isfile(f)
     load(f, 'M');
@@ -247,9 +218,7 @@ if isfile(f)
     fprintf('  RespFig6 (R2-10) Bland-Altman\n');
 end
 
-%% ========================================================================
 %% RespFig 7 — [R2-11] variability band width comparison
-%% ========================================================================
 f = fullfile(RES, 'R2_11_band_width_summary.csv');
 if isfile(f)
     T = readtable(f);
@@ -278,9 +247,7 @@ if isfile(f)
     fprintf('  RespFig7 (R2-11) band width\n');
 end
 
-%% ========================================================================
 %% RespFig 8 — [R2-23] height and relative wrist displacement
-%% ========================================================================
 f = fullfile(RES, 'R2_23_height_vs_D.csv');
 if isfile(f)
     T = readtable(f);
@@ -314,15 +281,13 @@ end
 
 fprintf('\nsaved to: %s\n', OUT);
 
-
-%% ===== local functions =====
+%% local functions
 function fig = local_fig(w, h)
     fig = figure('Color', 'w', 'Position', [100 100 w h], ...
                  'PaperPositionMode', 'auto');
 end
 
 function local_style(ax, S)
-% apply the manuscript format: Gill Sans MT, no grid/box, axis lines only
     set(ax, 'FontName', S.font, 'FontSize', S.fs, ...
         'Box', 'off', 'TickDir', 'out', 'LineWidth', 1, ...
         'XColor', [0 0 0], 'YColor', [0 0 0], 'Color', 'w');

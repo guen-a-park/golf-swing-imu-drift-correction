@@ -1,15 +1,7 @@
 %% [R2-2] R2_02_offset_variants.m
 %  Comparison of the results depending on how the club length assumption is set.
-%    (1) constant L    : manuscript condition. assumed club length at both time points
-%    (2) measured dist : mocap-measured ball-wrist distance at each time point. not usable in deployment
-%    (3) fixed offset  : L at address, L + d at impact. d is fixed to a single overall mean difference, so it
-%                        can be applied without mocap
-%    (4) per-participant offset : L at address, L + d_subj at impact. It only has to be measured once in a
-%                        calibration session, so it is deployable as well
-%
 %  Output : results/R2_02_offset_variants.csv
-%  2026-09-02
-%% ========================================================================
+
 clc; clear;
 thisDir = fileparts(mfilename('fullpath'));
 if isempty(thisDir), thisDir = pwd; end
@@ -30,7 +22,6 @@ load(fullfile(RES, 'R2_03_traj_store_ori7.mat'), 'R2_03_store');  S = R2_03_stor
 M = readtable(fullfile(RES, 'R2_common_mocap_metrics.csv'));
 M = M(M.club == 1 & M.trial >= 21 & M.trial <= 30, :);
 
-% how much longer the actual distance is at impact (mm)
 dGlobal = mean(M.L_imp - M.L_add);
 su = unique(M.subj);
 dSubj = containers.Map('KeyType','double','ValueType','double');

@@ -1,37 +1,6 @@
 %% [R2-6b] R2_06b_zero_velocity_propagation.m
-%  Response to the latter part of Reviewer 2, Comment R2-6
-%  ------------------------------------------------------------------------
-%  "quantify how violation of the zero-velocity assumption propagates into the final trajectory reconstruction error"
-%
-%  * this is not a change of method but a sensitivity analysis decomposing the error contribution.
-%     the proposed method still uses v(ADD)=v(BST)=v(FIN)=0. The motion capture velocity is used only
-%     as a counterfactual to compute "what it would have been if the assumption had been exact",
-%     and the result of this condition is not reported as the performance of the proposed method.
-%
-%  key point: the difference between the two conditions is obtained in closed form, independent of the IMU signal.
-%  ------------------------------------------------------------------------
-%  current correction (same as swing1127_withml_3d_0304.m)
-%    (1) i in [ADD,BST] : v(i) -= v(BST) * (i-ADD)/(BST-ADD)          -> v(BST)=0
-%    (2) i in (BST,end] : v(i) -= v(BST+1)                             -> v(BST+1)=0
-%    (3) i in [BST,end] : v(i) -= v(FIN) * (i-BST)/(FIN-BST)           -> v(FIN)=0
-%
-%  counterfactual condition: the target is set to the motion capture measured velocity vm instead of 0.
-%  in the velocity difference between the two conditions d(i) = v_current(i) - v_counterfactual(i), v0 cancels out and
-%
-%    [ADD,BST] : d(i) = -vm(BST) * (i-ADD)/(BST-ADD)
-%    [BST,FIN] : d(i) = -vm(BST) + (vm(BST) - vm(FIN)) * (i-BST)/(FIN-BST)
-%
-%  it is therefore determined without IMU data, from vm(BST), vm(FIN) and the event instants alone.
-%  the displacement difference is dx(t) = cumtrapz(d), and after the D constraint correction
-%    dx_corr(t) = dx(t) - w(t)*dx(IMP),  w(t) = (t-ADD)/(IMP-ADD)
-%  it becomes 0 at impact by definition (absorbed by the constraint).
-%
-%  Run first : R2_common_mocap_extract.m
+%  Propagation of a zero-velocity assumption violation into the trajectory error.
 %  Output    : revision/results/R2_06b_zero_velocity_propagation.csv
-%              revision/results/fig_R2_06b_propagation.png/.svg
-%
-%  2026-08-28
-%% ========================================================================
 
 clc; clear; close all;
 set(groot, 'defaultAxesFontSize', 12);
@@ -60,21 +29,16 @@ for k = 1:nT
 
     n = 900;
     d = zeros(n, 3);
-    % [ADD, BST] : linear from 0 to -vm(BST)
     i1 = add:bst;
     w1 = (i1 - add)' / (bst - add);
     d(i1,:) = -w1 .* vmBST;
-    % [BST, FIN] : linear from -vm(BST) to -vm(FIN)
     i2 = bst:fin;
     w2 = (i2 - bst)' / (fin - bst);
     d(i2,:) = -vmBST + w2 .* (vmBST - vmFIN);
-    % after FIN is out of scope (the original code also leaves it at 0)
 
-    % displacement difference (referenced to ADD)
     dx = cumtrapz(ts, d);
     dx = dx - dx(add,:);                       % mm
 
-    % residual difference after the D constraint correction : dx_corr(t) = dx(t) - w(t)*dx(IMP)
     wD = zeros(n,1);
     wD(add:fin) = ((add:fin) - add)' / (imp - add);
     cx = dx - wD .* dx(imp,:);
@@ -90,7 +54,7 @@ for k = 1:nT
     cxFIN(k,:) = abs(cx(fin,:));
 end
 
-%% ===== participant-level aggregation =====
+%% participant-level aggregation
 subjList = unique(Msel.subj);
 agg = @(V) local_subjagg(V, Msel.subj, subjList);
 
@@ -122,7 +86,7 @@ T = cell2table(rows, 'VariableNames', {'quantity', ...
     'X_mean','X_sd','Y_mean','Y_sd','Z_mean','Z_sd','norm_mean','norm_sd'});
 writetable(T, fullfile(OUT_DIR, 'R2_06b_zero_velocity_propagation.csv'));
 
-%% ===== interpretation output =====
+%% interpretation output
 nrmIMP = vecnorm(dxIMP,2,2)/10;  [mIMP, ~] = agg(nrmIMP);
 nrmDS  = vecnorm(dxDS ,2,2)/10;  [mDS , ~] = agg(nrmDS);
 cnrmDS = vecnorm(cxDS ,2,2)/10;  [cDS , ~] = agg(cnrmDS);
@@ -132,7 +96,7 @@ fprintf('after the D constraint correction: 0 at impact by definition (absorbed 
 fprintf('               -> absorption rate %.0f%%\n', 100*(1 - cDS/max(mDS,eps)));
 fprintf('residual contribution %.1f%% of the reported downswing trajectory error of 15.13 cm\n', 100*cDS/15.13);
 
-%% ===== figure =====
+%% figure
 figure('Color','w','Position',[100 100 900 330]);
 subplot(1,2,1); hold on; grid on;
 b = bar([T.norm_mean(1:4)'; nan(1,4)], 'grouped');
@@ -151,8 +115,7 @@ saveas(gcf, fullfile(OUT_DIR, 'fig_R2_06b_propagation.svg'));
 
 fprintf('\nsaved: %s\n', fullfile(OUT_DIR, 'R2_06b_zero_velocity_propagation.csv'));
 
-
-%% ===== local functions =====
+%% local functions
 function [m, s] = local_subjagg(V, subj, subjList)
     nS = numel(subjList);
     sm = nan(nS, size(V,2));

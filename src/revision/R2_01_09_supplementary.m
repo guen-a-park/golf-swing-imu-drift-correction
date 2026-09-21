@@ -1,24 +1,6 @@
 %% R2_01_09_supplementary.m
 %  Computes two items found missing on a full re-reading of the review.
-%  ------------------------------------------------------------------------
-%  (A) [R2-1] numerical example of the video-based reconstruction
-%      Reviewer's original text: "A numerical example or an intermediate figure showing the ray,
-%      the geometric constraint, the estimated wrist positions at address and impact,
-%      and the resulting vector would substantially improve clarity."
-%      -> for one trial, pixel -> camera ray -> world ray -> quadratic coefficients ->
-%         two roots -> selected root -> ADD/IMP 3D positions -> D; prints the numbers at every step.
-%
-%  (B) [R2-9] trajectory error when saturated trials are excluded
-%      Reviewer's original text: "They should also repeat the main trajectory reconstruction results
-%      after excluding saturated trials."
-%      -> even though we chose not to exclude them, the requested numbers must be given.
-%         computed directly from the stored trajectory data (R2_03_traj_store_ori7.mat) and the saturation mask.
-%
 %  Output : revision/results/R2_01_worked_example.txt
-%         revision/results/R2_09_traj_error_saturation_excluded.csv
-%
-%  2026-08-30
-%% ========================================================================
 
 clc; clear; close all;
 
@@ -27,10 +9,7 @@ if isempty(thisDir), thisDir = pwd; end
 baseDir = fileparts(thisDir);
 RES = fullfile(thisDir, 'results');
 
-%% ========================================================================
 %% (A) [R2-1] numerical example of the video-based reconstruction
-%% ========================================================================
-% representative trial: subj 3 (S03, no saturation), driver, trial 21
 SUBJ = 3; CLUB = 1; TRIAL = 21;
 
 fx = 1195.360; fy = 1190.848; cx = 732.411; cy = 531.828;
@@ -109,9 +88,7 @@ fid = fopen(fullfile(RES, 'R2_01_worked_example.txt'), 'w');
 fprintf(fid, '%s\n', lines{:}); fclose(fid);
 fprintf('%s\n', lines{:});
 
-%% ========================================================================
 %% (B) [R2-9] trajectory error when saturated trials are excluded
-%% ========================================================================
 storeFile = fullfile(RES, 'R2_03_traj_store_ori7.mat');
 maskFile  = fullfile(RES, 'gyro_saturation_mask.mat');
 if isfile(storeFile) && isfile(maskFile)
@@ -167,7 +144,6 @@ if isfile(storeFile) && isfile(maskFile)
         numel(unique(subj)), numel(unique(subj(~isSat))));
     fprintf('saved: %s\n', fullfile(RES, 'R2_09_traj_error_saturation_excluded.csv'));
 end
-
 
 function m = local_subjagg(v, subj, keep)
     su = unique(subj(keep));

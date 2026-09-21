@@ -1,20 +1,6 @@
 %% [R2-10] R2_10_bias_systematic.m
 %  Determines whether the constraint error of the two methods is a systematic bias or an error varying by participant.
-%
-%  The error e = D_est - D_ref is decomposed into three components.
-%     (1) common bias   : the same value for every participant
-%     (2) participant part : how far the per-participant mean deviates from the common bias
-%     (3) trial part: the part varying by trial within a participant
-%
-%  If it is a systematic bias, (1) dominates and its sign is consistent across participants, and once the cause is known
-%  it can be removed. If the error varies by participant, (2) is large, which distorts between-participant comparison
-%  and cannot be removed without knowing the reference value.
-%
-%  Target : 99 trials of the driver test set
 %  Output : revision/results/R2_10_bias_systematic.csv
-%
-%  2026-09-06
-%% ========================================================================
 
 clc; clear; close all;
 thisDir = fileparts(mfilename('fullpath'));
@@ -51,7 +37,6 @@ for nm = {'D_Vision', 'D_AGFormer'}
         rows = [rows; {nm{1}, axName{d}, b0, sS, sT, ...
                        100*b0^2/tot, 100*sS^2/tot, 100*sT^2/tot, nsign}]; %#ok<AGROW>
     end
-    % how much the 3D error decreases when the common bias is removed
     e3  = est - ref;
     r0  = mean(vecnorm(e3, 2, 2));
     r1  = mean(vecnorm(e3 - mean(e3, 1), 2, 2));

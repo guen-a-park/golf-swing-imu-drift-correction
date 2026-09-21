@@ -1,12 +1,7 @@
 %% [R2-1] R2_01_input_sensitivity_axis.m
 %  Examines along which axis D_Vision moves when the inputs are perturbed.
-%  R2_01_input_sensitivity_test.m : same computation, but reports the 3-axis components instead of the norm.
-%  For each perturbation, one input component (u/v, cx/cy, fx/fy, Tx/Ty/Tz) is perturbed at a time, and,
-%  the result of the component with the largest norm is used as that perturbation's representative value.
-%
 %  Output : results/R2_01_input_sensitivity_axis.csv
-%  2026-09-03
-%% ========================================================================
+
 clc; clear;
 
 thisDir = fileparts(mfilename('fullpath'));
@@ -112,7 +107,6 @@ end
 writetable(cell2table(rows, 'VariableNames', {'perturbation','dX','dY','dZ','magnitude'}), ...
     fullfile(thisDir, 'results', 'R2_01_input_sensitivity_axis.csv'));
 fprintf('\nsaved: results/R2_01_input_sensitivity_axis.csv\n');
-
 
 function D = local_D(pa, pi, R2w, Tw, L, K)
     D = local_rec(pi, R2w, Tw, L, K) - local_rec(pa, R2w, Tw, L, K);

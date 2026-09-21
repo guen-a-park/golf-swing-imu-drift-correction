@@ -1,16 +1,6 @@
 %% [R2-9] R2_09_dvision_saturation.m
 %  Computes the per-segment trajectory error before and after excluding saturated trials, under the
-%  video-based constraint (D_Vision) correction condition, in which no learned model is involved.
-%
-%  In the D_Infer condition the model was trained including the saturated trials, so it would merely be a
-%  re-aggregation with a changed evaluation set. D_Vision is computed directly from video and is independent of
-%  training, so the comparison with and without exclusion is not affected by the model.
-%
-%  Prerequisite : R2_07_misalignment.m (store), R2_09_gyro_saturation.m (mask)
 %  Output      : revision/results/R2_09_dvision_saturation.csv
-%
-%  2026-09-05
-%% ========================================================================
 
 clc; clear; close all;
 
@@ -33,21 +23,17 @@ n = numel(S);
 sj = nan(n,1); sat = false(n,1);
 eV = nan(n,4); eI = nan(n,4);
 
-% expand the saturation flags into (subj, trial)
 satMap = containers.Map('KeyType','char','ValueType','logical');
 for su = 1:numel(SF)
     s = SF(su);
     fn = fieldnames(s);
-    % find the driver trial numbers and flags
     for f = 1:numel(fn)
         v = s.(fn{f});
         if isnumeric(v) || islogical(v)
-            % instead of looking for a (subj, trial) list, this is handled separately below
         end
     end
 end
 
-% the satFlag structure differs per condition, so the trialwise csv is used first
 TW = readtable(fullfile(RES, 'gyro_saturation_trialwise.csv'));
 TW = TW(strcmp(string(TW.clubName), "driver") & TW.trial >= 21, :);
 
@@ -91,7 +77,7 @@ writetable(cell2table(rows, 'VariableNames', ...
     fullfile(RES, 'R2_09_dvision_saturation.csv'));
 fprintf(['saved: results/R2_09_dvision_saturation.csv' NL]);
 
-%% ===== helper functions =====
+%% helper functions
 function traj = local_correct(traj0, D, add, imp, fin)
     traj = traj0; dm = traj0(imp,:) - D;
     for kk = add:fin

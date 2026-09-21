@@ -1,12 +1,7 @@
 %% [R2-7] R2_07_orientation_only.m
 %  directly compares the integrated trajectory without the D correction (imu_trajCal) against mocap for the four orientation conditions.
-%  no learning results are mixed in, so the effect of the orientation condition alone is isolated.
-%
-%  for comparison, the case with the D_Vision correction applied is also produced from the same store.
-%
 %  Output : results/R2_07_orientation_only.csv
-%  2026-09-01
-%% ========================================================================
+
 clc; clear;
 
 thisDir = fileparts(mfilename('fullpath'));

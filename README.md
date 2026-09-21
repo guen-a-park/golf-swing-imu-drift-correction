@@ -31,8 +31,8 @@ lib/            shared MATLAB helpers (quaternion algebra, filtering, geometry)
 
 ## Requirements
 
-- MATLAB R2021b or later, Signal Processing Toolbox and Statistics and Machine
-  Learning Toolbox
+- MATLAB R2024a, the version used for the reported analyses, with the Signal
+  Processing Toolbox and the Statistics and Machine Learning Toolbox
 - Python 3.9+ with PyTorch 1.13+, NumPy, SciPy, pandas
 - 2D wrist keypoints are obtained with HRNet-W48 pretrained on COCO, used as
   published and not modified here
@@ -84,10 +84,26 @@ Participant identifiers in this code are anonymised as `S01` … `S10`.
 
 ## Excluded trials
 
-Three trials were excluded because the IMU signal could not be used owing to a
-recording fault: participant 8 driver-test trial 30, and participants 5 and 9
-in the faster-than-preferred condition (trials 5 and 8). The exclusion is
-declared in `src/model/traj_ml_withtraj_matrevised_3d_1216.py` as `ban_triples`.
+Five trials were excluded because the IMU recording could not be used.
+
+| participant | condition | trial |
+|---|---|---|
+| 2 | driver, training | 10 |
+| 6 | driver, training | 3 |
+| 8 | driver, test | 30 |
+| 5 | faster than preferred | 5 |
+| 9 | faster than preferred | 8 |
+
+This leaves 198 driver training trials, 99 driver test trials and 98
+faster-than-preferred trials, 395 in total.
+
+The exclusion is applied once in `src/imu/swing1127_withml_3d_0304.m`, which
+builds the `swingData_2508_forML*.mat` used for training, so the excluded
+trials never reach the model. The `ban_triples` list in
+`src/model/traj_ml_withtraj_matrevised_3d_1216.py` repeats only the three that
+could otherwise be reached through a different entry point, and
+`src/revision/R2_common_mocap_extract.m` carries the full list for the
+revision analyses.
 
 ## Citation
 

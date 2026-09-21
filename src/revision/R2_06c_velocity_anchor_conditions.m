@@ -1,19 +1,6 @@
 %% [R2-6c] R2_06c_velocity_anchor_conditions.m
 %  For the condition using the approximate zero-velocity assumption and the condition using the
-%  measured velocity as the anchor target, the per-segment trajectory errors are computed against motion capture.
-%
-%  R2_06b obtained only the "difference" between the two conditions in closed form. To answer the reviewer
-%  the error of each condition itself is needed, so it is computed separately here.
-%
-%  Since d(i) = v_zero(i) - v_measured(i), the displacement is
-%    x_measured(t) = x_zero(t) - cumtrapz(d)
-%  and the same D correction is applied to both trajectories before the errors are compared.
-%
-%  Prerequisite : R2_common_mocap_extract.m, R2_07_misalignment.m (creates store)
 %  Output      : revision/results/R2_06c_velocity_anchor_conditions.csv
-%
-%  2026-09-04
-%% ========================================================================
 
 clc; clear; close all;
 
@@ -30,7 +17,6 @@ SEG = {'Backswing','add','bst'; 'Downswing','bst','imp'; ...
        'FollowThrough','imp','fin'; 'EntireSwing','add','fin'};
 DSET = {'MocapD','Dref'; 'VideoD','Dvid'; 'InferD','Dml'};
 
-% D~Infer~ of the condition reported in the manuscript (same run as R2_08)
 ML_DIR = fullfile(fileparts(fileparts(fileparts(thisDir))), 'multimodal');
 Dml = local_load_Dml(fullfile(ML_DIR, 'runs_R2_03_calib20_seed3'));
 if isempty(Dml), error('D_Infer run folder not found.'); end
@@ -52,7 +38,6 @@ for k = 1:n
     vmBST = [r.vBST_x(1) r.vBST_y(1) r.vBST_z(1)];      % mm/s
     vmFIN = [r.vFIN_x(1) r.vFIN_y(1) r.vFIN_z(1)];
 
-    % --- velocity difference between the two conditions (same closed form as R2_06b) ---
     nS = size(st.imu_trajCal, 1);
     d = zeros(nS, 3);
     i1 = add:bst;  w1 = (i1 - add)' / (bst - add);
@@ -67,7 +52,6 @@ for k = 1:n
     trajMv = st.imu_trajCal - dx;                       % measured-velocity anchor (counterfactual)
     shiftDS(k) = mean(vecnorm(dx(bst:imp,:), 2, 2))/10;
 
-    % --- no-displacement-constraint condition ---
     for p = 1:4
         i0 = st.(SEG{p,2}); i9 = st.(SEG{p,3});
         nZ(k,p)  = mean(vecnorm(st.Mtraj(i0:i9,:) - trajZ(i0:i9,:),  2, 2))/10;
@@ -95,7 +79,7 @@ for k = 1:n
     end
 end
 
-%% ===== output =====
+%% output
 fprintf('\n===== [R2-6c] per-segment trajectory error by anchor velocity target (cm) =====\n');
 fprintf('driver evaluation: %d trials / %d participants. participant-level mean\n', ...
     sum(isfinite(sj)), numel(unique(sj(isfinite(sj)))));
@@ -132,7 +116,7 @@ writetable(cell2table(rows, 'VariableNames', ...
     fullfile(RES, 'R2_06c_velocity_anchor_conditions.csv'));
 fprintf('saved: results/R2_06c_velocity_anchor_conditions.csv\n');
 
-%% ===== helper functions =====
+%% helper functions
 function traj = local_correct(traj0, D, add, imp, fin)
     traj = traj0;
     dm = traj0(imp,:) - D;

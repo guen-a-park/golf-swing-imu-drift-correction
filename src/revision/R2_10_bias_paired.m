@@ -1,22 +1,6 @@
 %% [R2-10] R2_10_bias_paired.m
 %  tests the difference in error structure at the participant level.
-%
-%  the variance decomposition computed earlier (72 % shared vs 6 %) was obtained by pooling trials, so
-%  it does not respect the repeated measures structure. The same quantity is re-expressed as one value
-%  per participant and tested with paired samples.
-%
-%     (a) how far each participant's bias deviates from the overall mean bias  |b_i - b|
-%         -> the smaller this value, the more the error reproduces across participants
-%     (b) standard deviation of the within-participant error  sd_i
-%         -> the smaller this value, the more stable the error within a participant
-%
-%  both values give one number per participant, so a paired t test with n = 10 is possible.
-%
-%  Target : 99 trials of the driver evaluation set
 %  Output : revision/results/R2_10_bias_paired.csv
-%
-%  2026-09-06
-%% ========================================================================
 
 clc; clear; close all;
 thisDir = fileparts(mfilename('fullpath'));

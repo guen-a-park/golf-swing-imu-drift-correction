@@ -1,18 +1,7 @@
 %% [R2-2] R2_02_within_subject_effect.m
 %  directly measures how much the within-participant between-trial D variation actually affects the corrected trajectory.
-%
-%  analytically one can say "if the constraint changes by δ the trajectory shifts by 0.91δ", but whether the shift is
-%  toward the reference value or away from it decides whether the error shrinks or grows. In fact, when the club length assumption was corrected,
-%  the constraint error shrank while the trajectory error grew. So the shift magnitude cannot be restated as an error contribution.
-%
-%  instead the two conditions are compared directly.
-%    (1) per-trial mocap D    : reflects the between-trial variation as is
-%    (2) participant-mean mocap D : ignores the variation and treats it as a constant
-%  the difference between the two conditions is the cost of "treating D as a per-participant constant".
-%
 %  Output : results/R2_02_within_subject_effect.csv
-%  2026-09-03
-%% ========================================================================
+
 clc; clear;
 thisDir = fileparts(mfilename('fullpath'));
 if isempty(thisDir), thisDir = pwd; end
@@ -22,7 +11,6 @@ load(fullfile(RES, 'R2_03_traj_store_ori7.mat'), 'R2_03_store');  S = R2_03_stor
 M = readtable(fullfile(RES, 'R2_common_mocap_metrics.csv'));
 M = M(M.club == 1 & M.trial >= 21 & M.trial <= 30, :);
 
-% per-participant mean of the mocap D
 su = unique(M.subj);
 Dbar = containers.Map('KeyType','double','ValueType','any');
 for s = su(:)'
@@ -67,7 +55,6 @@ writetable(cell2table({ 'per-trial mocap D', vA(1), vA(2), vA(3), vA(4), local_a
     'VariableNames', {'condition','Backswing','Downswing','FollowThrough','EntireSwing','Impact'}), ...
     fullfile(RES, 'R2_02_within_subject_effect.csv'));
 fprintf('\nsaved: results/R2_02_within_subject_effect.csv\n');
-
 
 function traj = local_correct(st, D)
     traj = st.imu_trajCal;

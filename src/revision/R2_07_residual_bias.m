@@ -1,16 +1,6 @@
 %% [R2-7] R2_07_residual_bias.m
 %  The gyro reading in the static address phase = residual bias after Ferraris correction.
-%  Computes how much it contributes to the orientation error when integrated over the swing duration.
-%
-%  Reviewer R2-7 : Caruso et al. reported that the bias changes even within one measurement
-%  (up to 0.17 deg/s within one minute). This study obtains the bias from a separate calibration,
-%  so the between-measurement difference may be larger -> measure its size directly in our data.
-%
-%  Prerequisite : R2_07_orifilter_store.m
 %  Output      : revision/results/R2_07_residual_bias.csv
-%
-%  2026-09-04
-%% ========================================================================
 
 clc; clear; close all;
 
@@ -29,7 +19,6 @@ dur = nan(n,1); contrib = nan(n,1); gyroSd = nan(n,1); qwin = nan(n,1);
 
 for k = 1:n
     st = S(k); sj(k) = st.subj;
-    % find the quietest WIN-length segment in the whole trial (the truly static segment)
     gn = vecnorm(st.gyro, 2, 2);
     N = numel(gn); best = inf; i0 = 1;
     for a = 1:(N - WIN)
@@ -47,7 +36,7 @@ for k = 1:n
     contrib(k) = bn(k) * dur(k);                  % deg
 end
 
-%% ===== output =====
+%% output
 NL = char(10);
 fprintf([NL '===== [R2-7] residual gyro bias in the static address phase =====' NL]);
 fprintf(['Driver test set %d trials / %d participants. Quietest %.1f s segment within each trial' NL NL], ...
@@ -70,7 +59,7 @@ T = table((1:numel(local_bysubj(bn,sj)))', local_bysubj(bn,sj), local_bysubj(con
 writetable(T, fullfile(RES, 'R2_07_residual_bias.csv'));
 fprintf([NL 'saved: results/R2_07_residual_bias.csv' NL]);
 
-%% ===== Helper functions =====
+%% Helper functions
 function v = local_bysubj(x, subj)
     s = unique(subj(isfinite(subj)));
     v = arrayfun(@(q) mean(x(subj == q), 'omitnan'), s);

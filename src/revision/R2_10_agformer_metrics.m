@@ -1,16 +1,6 @@
 %% [R2-10] R2_10_agformer_metrics.m
 %  Compares the accuracy of the video-based constraint with MotionAGFormer using the same metrics.
-%
-%  The manuscript compared the two methods only with Pearson correlation, but Reviewer 2's comment 10 says
-%  that correlation is not accuracy, so error-based metrics are reported in the same way.
-%  In addition, the pooled-trial correlation and the within-participant correlation are separated and reported
-%  for both methods.
-%
-%  Data   : driver evaluation set (same test trials as the manuscript)
 %  Output : revision/results/R2_10_agformer_metrics.csv
-%
-%  2026-09-05
-%% ========================================================================
 
 clc; clear; close all;
 thisDir = fileparts(mfilename('fullpath'));
@@ -37,7 +27,6 @@ for name = {'MotionAGFormer', 'proposed method'}
     fprintf([NL '===== %s =====' NL], name{1});
     for d = 1:3
         e = est(:,d) - ref(:,d);
-        % compute per participant first, then summarise across participants
         mae  = arrayfun(@(x) mean(abs(e(subj==x))), u);
         bias = arrayfun(@(x) mean(    e(subj==x) ), u);
         rmse = sqrt(mean(arrayfun(@(x) mean(e(subj==x).^2), u)));
@@ -49,7 +38,6 @@ for name = {'MotionAGFormer', 'proposed method'}
         rows = [rows; {name{1}, axName{d}, mean(mae), std(mae), rmse, ...
                        mean(bias), Rp, Pp, Rw, Pw}]; %#ok<AGROW>
     end
-    % 3D magnitude
     n3 = vecnorm(est - ref, 2, 2);
     m3 = arrayfun(@(x) mean(n3(subj==x)), u);
     fprintf(['  %-9s 3D magnitude %4.1f +/- %3.1f' NL], '', mean(m3), std(m3));

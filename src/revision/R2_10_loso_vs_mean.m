@@ -1,18 +1,6 @@
 %% [R2-10] R2_10_loso_vs_mean.m
 %  "Could a general model work without per-participant calibration?" This is the question answered here.
-%
-%  Conditions compared
-%     group mean D  : one constant for all participants (the simplest alternative)
-%     D_Infer       : pooled model including the evaluated participant in training
-%     D_Infer LOSO  : model excluding the evaluated participant from training
-%
-%  LOSO being worse than the group mean would mean a general model is worse than a simple constant.
-%
-%  Data   : driver evaluation set, 99 trials; per-participant means then summary across participants
 %  Output : revision/results/R2_10_loso_vs_mean.csv
-%
-%  2026-09-06
-%% ========================================================================
 
 clc; clear; close all;
 thisDir = fileparts(mfilename('fullpath'));
@@ -76,7 +64,7 @@ T = cell2table(rows, 'VariableNames', {'condition','D_error_cm','impact_cm','dow
 writetable(T, fullfile(OUT, 'R2_10_loso_vs_mean.csv'));
 fprintf([NL 'saved: results/R2_10_loso_vs_mean.csv' NL]);
 
-%% ===== helper functions =====
+%% helper functions
 function D = local_load(runDir, isLoso)
     D = nan(10,10,3);
     for su = 1:10

@@ -1,10 +1,7 @@
 %% [R2-1 / memo 13] R2_13_fps_phase_error.m
 %  Examines the effect of lowering the frame rate as phase-wise trajectory error, as in the manuscript, rather than as D error.
-%  The D_Vision reconstructed at each fps is fed into the linear correction as is and the error over the 4 phases is computed.
-%
 %  Output : results/R2_13_fps_phase_error.csv
-%  2026-08-31
-%% ========================================================================
+
 clc; clear;
 
 thisDir = fileparts(mfilename('fullpath'));

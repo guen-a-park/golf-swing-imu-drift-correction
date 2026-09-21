@@ -1,9 +1,5 @@
 %% [R2-10] R2_10_find_loso_run.m
 %  Finds which LOSO run produced the correlations (0.07 / 0.33 / 0.19) printed in panels G-I of
-%  Figure 3 of the manuscript, because the same run must be used when Figure 3 is redrawn.
-%
-%  2026-09-06
-%% ========================================================================
 
 clc; clear; close all;
 thisDir = fileparts(mfilename('fullpath'));

@@ -1,27 +1,6 @@
 %% [R2-10] R2_10_error_structure.m
 %  Determines which component of the constraint error degrades trajectory accuracy.
-%
-%  The constraint error e = D_est - D_ref is split into three components.
-%     (1) overall mean bias        : common to all participants and trials
-%     (2) per-participant bias deviation  : the part differing by participant
-%     (3) between-trial residual      : the part differing by trial within a participant
-%
-%  Repeating the correction with synthetic constraints that keep one component at a time shows whether
-%  the trajectory error grows from the error magnitude or from a specific component.
-%
-%  Conditions
-%     ref        : motion capture D (zero error)
-%     vid / ag   : actual estimated constraints
-%     ag_const   : ref + the overall mean bias of AGFormer only
-%     ag_center  : AGFormer with only the overall mean bias removed, leaving (2)+(3)
-%     vid_const  : ref + the overall mean bias of D_Vision only
-%     vid_center : D_Vision with only the overall mean bias removed
-%
-%  Target : 99 trials of the driver test set. Per-participant mean, then between-participant summary.
 %  Output : revision/results/R2_10_error_structure.csv
-%
-%  2026-09-06
-%% ========================================================================
 
 clc; clear; close all;
 thisDir = fileparts(mfilename('fullpath'));
@@ -33,8 +12,6 @@ load(fullfile(OUT, 'R2_03_traj_store_ori7.mat'), 'R2_03_store'); S = R2_03_store
 M  = readtable(fullfile(OUT, 'R2_common_mocap_metrics.csv'));
 Md = M(M.club == 1 & M.trial >= 21 & M.trial <= 30, :);
 
-% ---- constraints and their error components -------------------------------------------------
-% trajectories are stored in mm, so the constraints stay in mm. Only the error is converted to cm at the end.
 ref = [Md.Dref_x Md.Dref_y Md.Dref_z];
 vid = [Md.Dvid_x Md.Dvid_y Md.Dvid_z];
 ag  = [Md.Dag_x  Md.Dag_y  Md.Dag_z ];
@@ -69,7 +46,7 @@ for k = 1:n
     end
 end
 
-%% ===== Summary : per-participant mean, then between participants =====
+%% Summary : per-participant mean, then between participants
 u = unique(subj(isfinite(subj)));
 fprintf([NL '%-18s %10s %10s %10s' NL], 'Condition', 'Impact', 'Downswing', 'Entire swing');
 rows = {};
@@ -83,7 +60,7 @@ for c = 1:nc
     rows = [rows; {COND{c}, mean(vi), mean(vd), mean(ve)}]; %#ok<AGROW>
 end
 
-%% ===== Paired t-test against D_Vision (participant means, n = 10) =====
+%% Paired t-test against D_Vision (participant means, n = 10)
 fprintf([NL 'Versus D_Vision (paired t-test on per-participant means, n = %d)' NL], numel(u));
 for c = [3 4 5 6 7]
     [~, p1] = ttest(Msub(:,2,2), Msub(:,c,2));

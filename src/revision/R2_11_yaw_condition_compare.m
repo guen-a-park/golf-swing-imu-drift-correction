@@ -1,18 +1,6 @@
 %% [R2-11] R2_11_yaw_condition_compare.m
 %  Compares how the consistency analysis results change when the initial yaw reference is changed.
-%
-%  Before : preferred uses magnetometer heading, fast uses motion capture heading (mismatched reference)
-%  After  : both conditions use motion capture heading (matched reference)
-%
-%  fast condition wore a second device on the same wrist, which disturbed the magnetometer, so
-%  no magnetometer heading is available. Aligning the preferred condition that forms the band to the same reference
-%  is the way to compare the two groups in the same frame.
-%
-%  Compared    : band width, reconstruction error, agreement rate and its correlation (intraclass / within-participant)
 %  Output      : revision/results/R2_11_yaw_condition_compare.csv
-%
-%  2026-09-07
-%% ========================================================================
 
 clc; clear; close all;
 thisDir = fileparts(mfilename('fullpath'));
@@ -85,7 +73,7 @@ T = cell2table(rows, 'VariableNames', {'condition','agree_mocap','agree_imu','bi
 writetable(T, fullfile(OUT, 'R2_11_yaw_condition_compare.csv'));
 fprintf([NL 'saved: results/R2_11_yaw_condition_compare.csv' NL]);
 
-%% ===== helper functions =====
+%% helper functions
 function [icc, lo, hi, p] = local_icc(x, y)
     Y = [x(:) y(:)]; [n, k] = size(Y); gm = mean(Y(:));
     MSR = k * sum((mean(Y,2) - gm).^2) / (n-1);

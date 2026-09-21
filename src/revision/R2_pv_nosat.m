@@ -1,15 +1,6 @@
 %% R2_pv_nosat.m
 %  Tests whether the trajectory error obtained after retraining with saturated trials excluded from both
-%  training and evaluation differs significantly from the original condition. Same procedure as R2_09_nosat_traj.m, but
-%  participant-level values are kept so that a paired t-test can be performed.
-%
-%  Comparison : (A) original model, all trials   (B) retrained model, non-saturated trials
-%         Retraining uses the mean over 5 seeds.
-%
 %  Output : revision/results/R2_pv_nosat.csv
-%
-%  2026-09-10
-%% ========================================================================
 
 clc; clear; close all;
 
@@ -32,11 +23,9 @@ for k = 1:n
     if ~isempty(r), sat(k) = logical(r.isSaturated(1)); end
 end
 
-% (A) original model
 Dref = local_load_Dml(fullfile(ML, 'runs_0112_accgyro_400800_ori7traj2'));
 eA = local_phase(S, Dref, SEG);
 
-% (B) retrained model, mean over 5 seeds
 eB = nan(n, 4, 5);
 for s = 1:5
     T = readtable(fullfile(RES, sprintf('R2_09_nosat_Dml_seed%d.csv', s)));
@@ -48,7 +37,7 @@ for s = 1:5
 end
 eBm = mean(eB, 3, 'omitnan');
 
-%% ----- participant-level paired t-test --------------------------------------
+%% participant-level paired t-test
 rows = {};
 fprintf('\n===== saturation excluded + retrained (participant-level paired t-test, cm) =====\n');
 for q = 1:4
@@ -65,7 +54,7 @@ writetable(cell2table(rows, 'VariableNames', {'segment','total','sat_excluded_re
     fullfile(RES, 'R2_pv_nosat.csv'));
 fprintf('\nsaved: results/R2_pv_nosat.csv\n');
 
-%% ===== helpers =====
+%% helpers
 function e = local_phase(S, Dm, SEG)
     n = numel(S); e = nan(n,4);
     for k = 1:n

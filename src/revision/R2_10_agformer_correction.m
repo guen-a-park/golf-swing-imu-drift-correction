@@ -1,17 +1,6 @@
 %% [R2-10] R2_10_agformer_correction.m
 %  MotionAGFormer -estimated constraints are used for drift correction and the outcome is examined.
-%
-%  The manuscript compared the two methods only by the correlation of the constraint itself. But the constraint exists to correct the IMU-integrated
-%  trajectory, so keeping everything else identical and changing only the applied constraint to compare the final
-%  trajectory error shows the contribution directly.
-%
-%  Conditions   : no constraint / motion capture D D / D_Vision / D_Infer / D_AGFormer
-%
-%  Prerequisite : R2_03_traj_store_ori7.mat, R2_common_mocap_metrics.csv
 %  Output       : revision/results/R2_10_agformer_correction.csv
-%
-%  2026-09-05
-%% ========================================================================
 
 clc; clear; close all;
 thisDir = fileparts(mfilename('fullpath'));
@@ -60,7 +49,7 @@ for k = 1:n
     end
 end
 
-%% ===== average per participant first, then summarise across participants =====
+%% average per participant first, then summarise across participants
 u = unique(subj(isfinite(subj)));
 fprintf([NL 'driver evaluation, %d trials, %d participants' NL], sum(isfinite(subj)), numel(u));
 fprintf([NL '%-10s', repmat(' %13s', 1, 5), NL], 'interval', COND{:});
@@ -79,7 +68,7 @@ for q = 1:5
     fprintf([line NL]);
 end
 
-%% ===== D_Vision vs D_AGFormer paired test =====
+%% D_Vision vs D_AGFormer paired test
 fprintf([NL 'D~Vision~ vs D~AGFormer~ (paired t-test on per-participant means)' NL]);
 name = [SEG(:,1); {'impact'}];
 for q = 1:5
@@ -94,7 +83,7 @@ T = cell2table(rows, 'VariableNames', {'segment','condition','value','sd'});
 writetable(T, fullfile(OUT, 'R2_10_agformer_correction.csv'));
 fprintf([NL 'saved: results/R2_10_agformer_correction.csv' NL]);
 
-%% ===== helper functions =====
+%% helper functions
 function out = ternary(c, a, b)
     if c, out = a; else, out = b; end
 end

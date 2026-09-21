@@ -1,23 +1,6 @@
 %% [R2-11] R2_11_final_yawmocap.m
-%  Repeats the consistency analysis with the initial heading reference aligned.
-%
-%  In the fast swing condition a second device was worn on the same wrist and disturbed the magnetometer, so
-%  no magnetometer heading is available. The preferred condition forming the band is also aligned to the motion capture
-%  reference, so the two groups are compared in the same frame.
-%
-%  Outputs
-%    (1) per-axis band width and reconstruction error, paired test of the two bands
-%    (2) bias of the agreement rate and 95 % limits of agreement
-%    (3) agreement-rate correlation : intraclass correlation coefficient ICC(C,1) and within-participant correlation
-%    (4) Figure 6D revised
-%
-%  Prerequisite : R2_11_draw_figure5_yawmocap.m
-%  Output       : revision/results/R2_11_final_yawmocap.csv
-%              revision/results/R2_11_agreement_yawmocap.csv
-%              revision/results/fig_R2_11_figure6d_yawmocap.png / .svg
-%
-%  2026-09-09
-%% ========================================================================
+%  Repeats the consistency analysis with the initial heading aligned to a common reference.
+%  Output    : revision/results/R2_11_final_yawmocap.csv
 
 clc; clear; close all;
 set(groot, 'defaultAxesFontSize', 12);
@@ -28,7 +11,7 @@ NL  = char(10);
 
 load(fullfile(OUT, 'R2_11_trajectory_store_yawmocap.mat'), 'R2_11_store');
 S = R2_11_store;
-NSIG = 2;  WIN = [-280 0];  axName = {'X (fore-aft)','Y (lateral)','Z (vertical)'};
+NSIG = 2;  WIN = [-280 0];  axName = {'X (anteroposterior)','Y (mediolateral)','Z (vertical)'};
 
 subj = []; aR = []; aE = [];
 bM = nan(numel(S),3); bE = nan(numel(S),3); rE = nan(numel(S),3);
@@ -62,19 +45,19 @@ end
 ok = all(isfinite(bM), 2);
 bM = bM(ok,:); bE = bE(ok,:); rE = rE(ok,:);
 
-%% ===== (1) band width =====
-fprintf([NL 'per-axis band width and reconstruction error (%d participants, cm)' NL], size(bM,1));
+%% (1) band width
+fprintf([NL 'band width and reconstruction error per axis (%d participants, cm)' NL], size(bM,1));
 rows = {};
 for d = 1:3
     [~, p] = ttest(bM(:,d), bE(:,d));
-    fprintf('  %-9s motion capture %5.1f   IMU %5.1f   ratio %.1f   recon err %5.1f   p = %.4f %5.1f   p = %.4f%s', ...
+    fprintf('  %-22s motion capture %5.1f   IMU %5.1f   ratio %.1f   recon err %5.1f   p = %.4f%s', ...
             axName{d}, mean(bM(:,d)), mean(bE(:,d)), mean(bE(:,d))/mean(bM(:,d)), ...
             mean(rE(:,d)), p, NL);
     rows = [rows; {axName{d}, mean(bM(:,d)), mean(bE(:,d)), ...
                    mean(bE(:,d))/mean(bM(:,d)), mean(rE(:,d)), p}]; %#ok<AGROW>
 end
 
-%% ===== (2)(3) agreement rate =====
+%% (2)(3) agreement rate
 u = unique(subj);
 x = arrayfun(@(v) mean(aR(subj==v)), u);
 y = arrayfun(@(v) mean(aE(subj==v)), u);
@@ -84,32 +67,37 @@ d0 = y - x;
 [Rw, Pw] = local_within(aR, aE, subj);
 
 fprintf([NL 'agreement rate (%d fast trials, %d participants)' NL], numel(subj), numel(u));
-fprintf('  motion capture %.1f ± %.1f %%   IMU %.1f ± %.1f %%%s', ...
+fprintf('  motion capture %.1f +/- %.1f %%   IMU %.1f +/- %.1f %%%s', ...
         mean(x), std(x), mean(y), std(y), NL);
 fprintf('  bias %+.1f %%p (t = %.2f, p = %.4f), 95%% limits of agreement [%.1f, %.1f]%s', ...
         mean(d0), st_.tstat, pb, mean(d0)-1.96*std(d0), mean(d0)+1.96*std(d0), NL);
-fprintf('  intraclass correlation %.2f [%.2f, %.2f] (p = %.4g)%s', ic, lo, hi, pi_, NL);
-fprintf('  within-participant correlation %.2f (p = %.4g)%s', Rw, Pw, NL);
+fprintf('  ICC %.2f [%.2f, %.2f] (p = %.4g)%s', ic, lo, hi, pi_, NL);
+fprintf('  within-participant r %.2f (p = %.4g)%s', Rw, Pw, NL);
 
-%% ===== (4) Figure 6D =====
-CMAP = lines(numel(u));
-fig = figure('Color', 'w', 'Position', [200 200 560 520]);
-ax = axes(fig); hold(ax, 'on'); box(ax, 'on');
+%% (4) Figure 6D
+CMAP = R2_participant_colors();   % index by participant number
+fig = figure('Color', 'w', 'Units', 'inches', 'Position', [1 1 2.6 2.7]);
+set(fig, 'DefaultAxesFontName', 'Gill Sans MT', 'DefaultTextFontName', 'Gill Sans MT');
+ax = axes(fig, 'Position', [0.185 0.150 0.775 0.775]);
+hold(ax, 'on'); box(ax, 'off');
+set(ax, 'FontSize', 12, 'TickDir', 'in', 'LineWidth', 0.6, 'Layer', 'top');
 for k = 1:numel(u)
     m = subj == u(k);
-    scatter(ax, aR(m), aE(m), 26, CMAP(k,:), 'filled', 'MarkerFaceAlpha', 0.55);
+    scatter(ax, aR(m), aE(m), 26, CMAP(u(k),:), 'filled', 'MarkerFaceAlpha', 1);
 end
-mx = arrayfun(@(q) mean(aR(subj == q)), u);
-my = arrayfun(@(q) mean(aE(subj == q)), u);
-scatter(ax, mx, my, 45, CMAP, 'filled', 'MarkerEdgeColor', 'k', 'LineWidth', 0.6);
-p = polyfit(aR, aE, 1);  xl = [0 100];
-plot(ax, xl, polyval(p, xl), 'k-', 'LineWidth', 1.3);
-plot(ax, xl, xl, 'k--', 'LineWidth', 0.9);
+xl = [0 100];
 xlim(ax, xl); ylim(ax, xl); axis(ax, 'square');
-text(ax, 0.04, 0.96, sprintf('within-participant r = %.2f%s', Rw, local_star(Pw)), ...
-     'Units', 'normalized', 'VerticalAlignment', 'top', 'FontWeight', 'bold', 'FontSize', 12);
-xlabel(ax, 'Motion capture based agreement rate (%)');
-ylabel(ax, 'IMU based agreement rate (%)');
+xticks(ax, 0:20:100); yticks(ax, 0:20:100);
+plot(ax, xl, [xl(2) xl(2)], 'k-', 'LineWidth', 0.6, 'HandleVisibility', 'off');
+plot(ax, [xl(2) xl(2)], xl, 'k-', 'LineWidth', 0.6, 'HandleVisibility', 'off');
+text(ax, 0.05, 0.96, sprintf('r = %.2f', Rw), 'Units', 'normalized', ...
+     'VerticalAlignment', 'top', 'FontSize', 8);
+text(ax, 0.05, 0.87, local_ptxt(Pw), 'Units', 'normalized', ...
+     'VerticalAlignment', 'top', 'FontSize', 8);
+text(ax, -0.26, 1.10, 'D', 'Units', 'normalized', ...
+     'FontWeight', 'bold', 'FontSize', 11, 'VerticalAlignment', 'top');
+xlabel(ax, 'Measured Consistency (%)', 'FontSize', 7.5);
+ylabel(ax, 'Estimated Consistency (%)', 'FontSize', 7.5);
 
 writetable(cell2table(rows, 'VariableNames', {'axis','band_mocap','band_imu','ratio', ...
     'recon_err','p'}), fullfile(OUT, 'R2_11_final_yawmocap.csv'));
@@ -117,9 +105,9 @@ writetable(table(subj, aR, aE, 'VariableNames', {'subj','agree_mocap','agree_est
     fullfile(OUT, 'R2_11_agreement_yawmocap.csv'));
 exportgraphics(fig, fullfile(OUT, 'fig_R2_11_figure6d_final.png'), 'Resolution', 200);
 saveas(fig, fullfile(OUT, 'fig_R2_11_figure6d_final.svg'));
-fprintf([NL 'saved: results/fig_R2_11_figure6d_yawmocap.png' NL]);
+fprintf([NL 'saved: results/fig_R2_11_figure6d_final.png' NL]);
 
-%% ===== helper functions =====
+%% local functions
 function [icc, lo, hi, p] = local_icc(x, y)
     Y = [x(:) y(:)]; [n, k] = size(Y); gm = mean(Y(:));
     MSR = k * sum((mean(Y,2) - gm).^2) / (n-1);
@@ -145,4 +133,8 @@ function [Rw, Pw] = local_within(x, y, s)
 end
 function s = local_star(p)
     if p < 0.001, s = '***'; elseif p < 0.01, s = '**'; elseif p < 0.05, s = '*'; else, s = ''; end
+end
+
+function s = local_ptxt(p)
+if p < 0.001, s = 'p < 0.001'; else, s = sprintf('p = %.3f', p); end
 end

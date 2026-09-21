@@ -1,17 +1,6 @@
 %% [R2-8] R2_08_run_matrix.m
 %  Places the per-seed results of the three training families side by side, one to one.
-%  ------------------------------------------------------------------------
-%    ori7traj1-5          : previously run ori7 (manuscript Figure/Table use ori7traj2)
-%    R2_03_calib20_seed1-5 : ori7 rerun with a fixed seed in the revision
-%    R2_08_ori8_seed1-5    : ori8 (motion capture heading alignment). Different dataset, so retraining is required
-%
-%  D estimation error and trajectory error are examined together. Trajectory error uses the ori7 store for the ori7 family,
-%  and the ori8 store for the ori8 family (only when available).
-%
 %  Output : results/R2_08_run_matrix.csv
-%
-%  2026-08-31
-%% ========================================================================
 
 clc; clear; close all;
 
@@ -53,7 +42,6 @@ for fi = 1:size(FAM,1)
             Dml(su,1:m,:) = [T.pred_x(1:m) T.pred_y(1:m) T.pred_z(1:m)];
         end
 
-        % D estimation error (vs the video-based target)
         de = [];
         for k = 1:height(M)
             v = squeeze(Dml(M.subj(k), M.trial(k)-20, :))';
@@ -62,7 +50,6 @@ for fi = 1:size(FAM,1)
         end
         Dcm = local_subj(de(:,2), de(:,1));
 
-        % trajectory error
         key = sprintf('o%d', FAM{fi,3});
         seg = nan(1,4); impE = NaN;
         if isfield(store, key)
@@ -96,7 +83,6 @@ writetable(cell2table(rows, 'VariableNames', ...
     {'family','seed','D_err_cm','Backswing','Downswing','FollowThrough','EntireSwing','Impact'}), ...
     fullfile(RES, 'R2_08_run_matrix.csv'));
 fprintf('saved: %s\n', fullfile(RES, 'R2_08_run_matrix.csv'));
-
 
 function m = local_subj(v, subj)
     su = unique(subj(isfinite(subj)));

@@ -1,14 +1,6 @@
 %% [R2-3, R3-2] R2_03_run_variability.m
 %  5 independent training runs: the performance variation between them is checked.
-%  ------------------------------------------------------------------------
-%  The manuscript figures and tables come from one of the 5 runs (run 2). Whether that choice drives the results,,
-%  and whether the chosen run is on the better side than the others, is checked.
-%  This is the evidence for Reviewer 3's comment that "the performance may be inflated".
-%
 %  Output : results/R2_03_run_variability.csv
-%
-%  2026-08-31
-%% ========================================================================
 
 clc; clear; close all;
 
@@ -72,7 +64,6 @@ writetable(cell2table(rows, 'VariableNames', ...
     {'run','Backswing','Downswing','FollowThrough','EntireSwing'}), ...
     fullfile(RES, 'R2_03_run_variability.csv'));
 fprintf('\nsaved: %s\n', fullfile(RES, 'R2_03_run_variability.csv'));
-
 
 function m = local_agg(v, subj)
     su = unique(subj(isfinite(subj)));

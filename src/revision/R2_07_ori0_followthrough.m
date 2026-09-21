@@ -1,10 +1,7 @@
 %% [R2-7] R2_07_ori0_followthrough.m
 %  checks whether the ori0 follow-through error appears in every participant and how many drive it up.
-%  compares integrated trajectories without the D correction to exclude the learning effect.
-%
 %  Output : results/R2_07_ori0_followthrough.csv
-%  2026-09-01
-%% ========================================================================
+
 clc; clear;
 thisDir = fileparts(mfilename('fullpath'));
 if isempty(thisDir), thisDir = pwd; end

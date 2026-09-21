@@ -1,20 +1,6 @@
 %% [R2-7] R2_07_filter_compare.m
 %  Compares the current orientation estimate (static initialization + gyro integration)
-%  with a complementary-filter-based estimate, phase-wise orientation error against motion capture.
-%
-%  Reviewer R2-7 : "(at least in low-dynamic phases) integrating only angular velocity
-%  without accelerometer correction may not be ideal"
-%  -> check whether adding accelerometer correction actually reduces the orientation error.
-%
-%  The filter is a Mahony-type complementary filter. At each sample the orientation is propagated by the gyro,
-%  then the gravity-direction error is fed back only when the acceleration magnitude is close to gravity.
-%  Three gains (Kp) are run to check the result does not depend on the gain choice.
-%
-%  Prerequisite : R2_07_orifilter_store.m
 %  Output      : revision/results/R2_07_filter_compare.csv
-%
-%  2026-09-04
-%% ========================================================================
 
 clc; clear; close all;
 
@@ -65,7 +51,7 @@ for k = 1:n
     end
 end
 
-%% ===== output =====
+%% output
 NL = char(10);
 fprintf([NL '===== [R2-7] gyro integration vs complementary filter, phase-wise orientation error (deg) =====' NL]);
 fprintf(['Driver test set %d trials / %d participants. Participant-level mean' NL], ...
@@ -92,9 +78,8 @@ T = cell2table(vertcat(rows{:}), 'VariableNames', ...
 writetable(T, fullfile(RES, 'R2_07_filter_compare.csv'));
 fprintf([NL 'saved: results/R2_07_filter_compare.csv' NL]);
 
-%% ===== Helper functions =====
+%% Helper functions
 function e = local_angle_error(Ra, Rb)
-% angle between two rotations (deg), per sample
     N = size(Ra,3); e = nan(N,1);
     for t = 1:N
         Rr = Ra(:,:,t)' * Rb(:,:,t);
@@ -104,8 +89,6 @@ function e = local_angle_error(Ra, Rb)
 end
 
 function [Rinf, frac] = local_mahony(time, a, w, ind, Rini, Kp, accTol)
-% gyro propagation + accelerometer gravity-direction feedback (Mahony type)
-%  a : acceleration (in g), w : angular velocity (rad/s)
     N = numel(time);
     Rinf = zeros(3,3,N);
     R = Rini;
@@ -118,7 +101,6 @@ function [Rinf, frac] = local_mahony(time, a, w, ind, Rini, Kp, accTol)
         an = norm(a(t,:));
         tot = tot + 1;
         if abs(an - 1) < accTol && an > 0
-            % error between estimated and measured gravity direction in the sensor frame
             vHat = Rinf(:,:,t-1)' * gW;          % estimate
             vMeas = a(t,:)' / an;                % measurement
             wc = wc + Kp * cross(vMeas, vHat);

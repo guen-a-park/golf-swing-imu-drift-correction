@@ -1,22 +1,6 @@
 %% [R2-10] R2_10_discriminability.m
 %  Tests "does the estimate discriminate between participants" with standard metrics.
-%
-%  The between-participant Pearson correlation rests on only 10 participant means, so it is weak evidence.
-%  The following two are reported together for the same question.
-%
-%   (1) intraclass correlation coefficient ICC(C,1) : between-participant agreement of estimate and reference value.
-%       It ignores a constant bias and looks only at relative order and spacing. Since the constraint is meant
-%       to discriminate between participants, the consistency form is appropriate.
-%
-%   (2) F from one-way ANOVA : is the estimate itself separated by participant.
-%       It checks whether the between-participant variance is large relative to trial noise. Without separation,
-%       whatever is estimated cannot serve as a participant-specific constraint.
-%
-%  Target : driver evaluation set, 99 trials
 %  Output : revision/results/R2_10_discriminability.csv
-%
-%  2026-09-06
-%% ========================================================================
 
 clc; clear; close all;
 thisDir = fileparts(mfilename('fullpath'));
@@ -61,9 +45,8 @@ T = cell2table(rows, 'VariableNames', {'index','axis','prop','p_prop','ag','p_ag
 writetable(T, fullfile(OUT, 'R2_10_discriminability.csv'));
 fprintf([NL 'saved: results/R2_10_discriminability.csv' NL]);
 
-%% ===== helper functions =====
+%% helper functions
 function [icc, lo, hi, p] = local_icc(x, y)
-% ICC(C,1) : two-way mixed, consistency, single measure
     Y = [x(:) y(:)]; [n, k] = size(Y);
     gm = mean(Y(:));
     MSR = k * sum((mean(Y,2) - gm).^2) / (n-1);            % rows (participants)

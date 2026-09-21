@@ -1,21 +1,6 @@
 %% [R2-18] R2_18_marker_offset.m
 %  The component left in D~Vision~ by the difference in definition between the motion capture reference point and the video wrist detection point.
-%
-%  The motion capture reference is the centre of the marker cluster on the IMU housing, while the video gives the
-%  anatomical wrist centre produced by the pose estimator. The offset r between the two points is fixed to the wrist
-%  segment, so its direction in the world frame differs between address and impact.
-%
-%      residual component of D = R_IMP * r - R_ADD * r = R_ADD * (dR - I) * r,   dR = R_ADD' * R_IMP
-%
-%  If the orientations at the two time points were identical it would cancel in the subtraction, but the wrist rotates
-%  a lot in between, so it does not. This protocol has no anatomical wrist marker, so |r| cannot be measured;
-%  3 cm and 4 cm are therefore assumed and only the rotation component is measured to obtain the contribution.
-%
-%  Prerequisite : R2_07_orifilter_store.m  (results/R2_07_orifilter_store.mat)
 %  Output      : revision/results/R2_18_marker_offset.csv
-%
-%  2026-09-05
-%% ========================================================================
 
 clc; clear; close all;
 thisDir = fileparts(mfilename('fullpath'));
@@ -41,7 +26,6 @@ for k = 1:numel(S)
     subj(end+1,1) = st.subj;               %#ok<SAGROW>
     dth(end+1,1)  = th;                    %#ok<SAGROW>
 
-    % the offset direction is unknown, so compute it for each of the three sensor axes
     for a = 1:3
         e = zeros(3,1); e(a) = 1;
         v = (dR - eye(3)) * e;             % residual for a unit offset
@@ -51,7 +35,7 @@ for k = 1:numel(S)
     end
 end
 
-%% ===== average per participant first, then summarize across participants =====
+%% average per participant first, then summarize across participants
 u = unique(subj);
 mDth = arrayfun(@(x) mean(dth(subj==x)), u);
 fprintf([NL 'address -> impact wrist orientation change' NL]);
@@ -68,7 +52,6 @@ for q = 1:numel(RNORM)
                 RNORM(q), axName{a}, mean(v), std(v), NL);
         rows = [rows; {RNORM(q), axName{a}, mean(v), std(v)}]; %#ok<AGROW>
     end
-    % directional upper bound : when perpendicular to the rotation axis 2|r|sin(dth/2)
     vmax = arrayfun(@(x) mean(2*RNORM(q)*sind(dth(subj==x)/2)), u);
     fprintf('  |r| = %d cm, upper bound (perpendicular to rotation axis) : %.1f +/- %.1f%s', ...
             RNORM(q), mean(vmax), std(vmax), NL);

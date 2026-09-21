@@ -1,27 +1,6 @@
 %% [R2-2] R2_02_true_distance_trajectory.m
 %  Quantifies, in trajectory-error units, the effect of inaccuracy in the hard geometric constraint on the reconstructed trajectory.
-%  ------------------------------------------------------------------------
-%  Reviewer's original wording:
-%    "The authors should discuss how measurement uncertainty quantitatively affects
-%     reconstruction, i.e., how plausible errors in the assumed ball to wrist distance
-%     affect D_Vision and the final corrected trajectory. For example, if a subject is
-%     repeatable within approximately +-2 cm in the address to impact displacement,
-%     what effect does this have on the reconstructed trajectory?"
-%
-%  Two things are computed. It re-solves and compares rather than using derivative sensitivity, so the interpretation is intuitive.
-%
-%  (A) Instead of the assumed constant club length, the actual ball-wrist distance measured by motion capture at each
-%      time point is used as the radius and D is recovered on the same camera ray. The per-segment error when the
-%      trajectory is corrected with that D is presented side by side with the original condition.
-%
-%  (B) Effect of the "+-2 cm repeatability of the address-impact displacement" the reviewer cited as an example.
-%      Since D is the boundary condition at impact, a variation delta in D moves the reconstructed trajectory by
-%      exactly delta at impact and by 0.91*delta on the downswing average. Shown together with the measured variability.
-%
 %  Output : results/R2_02_true_distance_trajectory.csv
-%
-%  2026-08-31
-%% ========================================================================
 
 clc; clear; close all;
 
@@ -29,7 +8,6 @@ thisDir = fileparts(mfilename('fullpath'));
 if isempty(thisDir), thisDir = pwd; end
 RES = fullfile(thisDir, 'results');
 
-% camera position (same as clublength_3d_1020.m, per participant)
 T_CAM = [1944.24195587, -147.53836065, 1065.52214668;
          1946.26368487, -145.41073665, 1064.27866168;
          1941.23811087, -147.26589965, 1064.27767068;
@@ -41,7 +19,7 @@ T_CAM = [1944.24195587, -147.53836065, 1065.52214668;
          2100.91714417, -175.84581295, 1072.13565044;
          2106.32278417, -184.96391595, 1074.71015144];
 
-%% ----- materials --------------------------------------------------------------
+%% materials
 load(fullfile(RES, 'R2_03_traj_store_ori7.mat'), 'R2_03_store');  S = R2_03_store;
 M = readtable(fullfile(RES, 'R2_common_mocap_metrics.csv'));
 M = M(M.club == 1, :);
@@ -62,7 +40,6 @@ for k = 1:n
     Dvid = [row.Dvid_x, row.Dvid_y, row.Dvid_z];                 % assumed constant length
     pa = [row.addEst_x; row.addEst_y; row.addEst_z];
     pi_= [row.impEst_x; row.impEst_y; row.impEst_z];
-    % re-solve on the same camera ray with only the radius replaced by the actual measured distance
     qa = local_resolve(Tw, pa, row.L_add);
     qi = local_resolve(Tw, pi_, row.L_imp);
     if any(~isfinite([qa; qi])), continue; end
@@ -80,7 +57,7 @@ for k = 1:n
     iB(k) = norm(st.Mtraj(st.imp,:) - tB(st.imp,:))/10;
 end
 
-%% ----- (A) results ----------------------------------------------------------
+%% (A) results
 rows = {};
 fprintf('\n===== [R2-2] assumed constant length vs measured actual distance (participant level, cm) =====\n');
 fprintf('%-16s %20s %20s\n', 'Segment', 'assumed constant l', 'measured distances');
@@ -100,7 +77,7 @@ writetable(cell2table(rows, 'VariableNames', ...
     {'segment','assumedL_mean','assumedL_sd','trueDist_mean','trueDist_sd'}), ...
     fullfile(RES, 'R2_02_true_distance_trajectory.csv'));
 
-%% ----- (B) effect of D repeatability on the trajectory ------------------------------
+%% (B) effect of D repeatability on the trajectory
 sd = nan(10,3);
 for su = 1:10
     kk = M.subj == su & M.trial >= 21 & M.trial <= 30;
@@ -116,11 +93,8 @@ fprintf(['\nSince D is the boundary condition at impact, a change of delta in D 
 
 fprintf('\nsaved: %s\n', fullfile(RES, 'R2_02_true_distance_trajectory.csv'));
 
-
-%% ----- local -------------------------------------------------------------
+%% local
 function q = local_resolve(Tw, p_ref, L)
-% Recomputes the intersection with the sphere of radius L centred on the ball, along the ray from the camera toward p_ref.
-% Picks the root on the same side as the original solution (the far side).
     r = (p_ref - Tw); s_ref = norm(r); r = r / s_ref;
     a = 1; b = 2*dot(r, Tw); c = dot(Tw, Tw) - L^2;
     disc = b^2 - 4*a*c;

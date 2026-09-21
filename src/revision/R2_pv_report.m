@@ -1,12 +1,6 @@
 %% R2_pv_report.m
 %  For items where the manuscript only compares two conditions without attaching a test,
-%  a paired t-test on participant means is performed.
-%
-%  Prerequisite : R2_pv_collect.m  (results/_pv1.mat ... _pv4.mat)
 %  Output       : revision/results/R2_pvalues.csv
-%
-%  2026-09-09
-%% ========================================================================
 
 clc; clear; close all;
 D0 = fileparts(mfilename('fullpath')); if isempty(D0), D0 = pwd; end
@@ -15,7 +9,7 @@ NL = char(10);
 SEG = {'backswing','downswing','follow-through','entire swing'};
 rows = {};
 
-%% ===== (1) trajectory error by constraint condition : D_Vision / D_Infer vs motion capture D D =====
+%% (1) trajectory error by constraint condition : D_Vision / D_Infer vs motion capture D D
 L = load(fullfile(RES, '_pv1.mat'), 'err', 'eIMP', 'subj');
 CN = {'D_ref','D_Vision','D_Infer'};
 fprintf([NL '===== (1) trajectory error by constraint condition (cm) =====' NL]);
@@ -31,7 +25,7 @@ for r = 1:4
     end
 end
 
-%% ===== (2) assumed club length vs measured distance =====
+%% (2) assumed club length vs measured distance
 L = load(fullfile(RES, '_pv2.mat'), 'eA', 'eB', 'iA', 'iB', 'subj');
 fprintf([NL '===== (2) assumed club length vs measured distance (cm) =====' NL]);
 for r = 1:4
@@ -45,7 +39,7 @@ a = agg(L.iA, L.subj); b = agg(L.iB, L.subj);
 pr('measured distance', 'impact', mean(b), mean(a), stt.tstat, p);
 rows(end+1,:) = {'measured distance', 'impact', mean(b), mean(a), stt.tstat, p};
 
-%% ===== (3) velocity anchor : zero-velocity assumption vs measured velocity =====
+%% (3) velocity anchor : zero-velocity assumption vs measured velocity
 L = load(fullfile(RES, '_pv3.mat'), 'eZ', 'eMv', 'iZ', 'iMv', 'sj');
 DN = {'motion capture D','video D','inferred D D'};
 fprintf([NL '===== (3) velocity anchor conditions (cm) =====' NL]);
@@ -64,7 +58,7 @@ for q = 1:size(L.eZ, 3)
                      mean(b), mean(a), stt.tstat, p}; %#ok<AGROW>
 end
 
-%% ===== (4) complementary filter vs angular velocity integration alone =====
+%% (4) complementary filter vs angular velocity integration alone
 L = load(fullfile(RES, '_pv4.mat'), 'eG', 'eF', 'iG', 'iF', 'sj');
 KP = [0.1 0.5 2.0];
 fprintf([NL '===== (4) complementary filter (orientation error, deg), deg) =====' NL]);
@@ -78,7 +72,7 @@ for g = 1:numel(KP)
     end
 end
 
-%% ===== (5) exclusion of gyroscope saturation trials =====
+%% (5) exclusion of gyroscope saturation trials
 T = readtable(fullfile(RES, 'R2_08_ori7_trialwise.csv'));
 u = unique(T.subj);
 FLD = {'errIMP','impact'; 'errFollowThrough','follow-through'; ...
@@ -99,13 +93,13 @@ for f = 1:size(FLD,1)
     rows(end+1,:) = {'saturation excluded', FLD{f,2}, mean(ex(ok)), mean(all_(ok)), stt.tstat, p}; %#ok<AGROW>
 end
 
-%% ===== save =====
+%% save
 writetable(cell2table(rows, 'VariableNames', ...
     {'item','comparison','conditionB','conditionAA','t','p'}), ...
     fullfile(RES, 'R2_pvalues.csv'));
 fprintf([NL 'saved: results/R2_pvalues.csv' NL]);
 
-%% ===== helpers =====
+%% helpers
 function m = agg(v, subj)
     su = unique(subj(isfinite(subj)));
     m = arrayfun(@(s) mean(v(subj == s), 'omitnan'), su);

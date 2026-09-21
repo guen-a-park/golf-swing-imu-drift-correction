@@ -1,19 +1,6 @@
 %% [R2-10 / R2-11] R2_11_agreement_by_constraint.m
 %  Checks whether the consistency metric of Figure 6 changes depending on which constraint is used.
-%
-%  The displacement correction is distributed linearly from 0 at address to 1 at impact, so applying a
-%  different constraint to an already corrected trajectory is obtained directly as follows.
-%
-%      X_new(t) = X_old(t) + w(t) * (D_new - D_old),   w = (t-add)/(imp-add)
-%
-%  Using this, the preferred and fast trajectories are re-corrected with D_Vision and D_AGFormer respectively,
-%  the agreement is computed, and its correlation with the motion capture agreement is split into pooled / between-participant / within-participant.
-%
-%  Prerequisite : R2_11_draw_figure5_copy.m, R2_common_mocap_extract.m
 %  Output      : revision/results/R2_11_agreement_by_constraint.csv
-%
-%  2026-09-05
-%% ========================================================================
 
 clc; clear; close all;
 thisDir = fileparts(mfilename('fullpath'));
@@ -43,11 +30,9 @@ for s = 1:numel(R2_11_store)
     idx = max(1, imp + WIN(1)) : min(size(st.ref,1), imp + WIN(2));
     refP = st.ref * 0.1;  refF = st.ref_fast * 0.1;
 
-    % the fast trajectory is also aligned at impact, so address is restored using the event interval
     fAdd = double(st.imp(1)) - (fRows.idxIMP - fRows.idxADD);
     fImp = repmat(double(st.imp(1)), height(fRows), 1);
 
-    % build the trajectory for each condition
     P = cell(1,2); F = cell(1,2);
     for c = 1:2
         P{c} = local_reapply(st.prop      * 0.1, st.add, st.imp, pRows, COND{c}, chk);
@@ -72,7 +57,7 @@ for s = 1:numel(R2_11_store)
     end
 end
 
-%% ===== correlation decomposition =====
+%% correlation decomposition
 fprintf([NL '%d fast trials, %d participants' NL], numel(subj), numel(unique(subj)));
 fprintf([NL 'condition       pooled R  between R     within R         p(within)' NL]);
 rows = {};
@@ -92,9 +77,8 @@ T = cell2table(rows, 'VariableNames', {'constraint','R_pooled','R_between','R_wi
 writetable(T, fullfile(OUT, 'R2_11_agreement_by_constraint.csv'));
 fprintf([NL 'saved: results/R2_11_agreement_by_constraint.csv' NL]);
 
-%% ===== helper functions =====
+%% helper functions
 function X = local_reapply(X0, add, imp, rows, cond, ~)
-% Applies a different constraint to an already corrected trajectory X0.
     X = X0;
     n = size(X0,3);
     for t = 1:min(n, height(rows))

@@ -1,21 +1,6 @@
 %% [R2-11] R2_11_mag_check.m
 %  Checks whether the magnetometer in the fast swing is really unusable.
-%
-%  There is a record that a watch was worn on top in the fast condition, disturbing the magnetometer. If the initial
-%  heading cannot be obtained from the magnetometer, trajectory reconstruction for that condition needs another reference, so
-%  the degree of corruption is first checked quantitatively.
-%
-%  Items checked (at the address frame)
-%    (1) magnitude of the magnetometer vector       : should be similar across participants and conditions if normal
-%    (2) magnitude of the horizontal component         : the component actually used for yaw
-%    (3) difference between the magnetometer yaw and the marker yaw
-%
-%  club 1 (driver, preferred) and club 3 (fast) are examined side by side.
-%
 %  Output : revision/results/R2_11_mag_check.csv
-%
-%  2026-09-07
-%% ========================================================================
 
 clc; clear; close all;
 thisDir = fileparts(mfilename('fullpath'));
@@ -46,7 +31,6 @@ for ci = 1:2
             mxh = m(1)*cos(theta) + m(2)*sin(phi)*sin(theta) + m(3)*cos(phi)*sin(theta);
             myh = m(2)*cos(phi) - m(3)*sin(phi);
 
-            % marker-based yaw
             R = reshape(g.marker(g.add, 1:9), 3, 3);
             yawM = rad2deg(atan2(R(2,1), R(1,1)));
             yawI = 191.53 - rad2deg(atan2(myh, mxh));

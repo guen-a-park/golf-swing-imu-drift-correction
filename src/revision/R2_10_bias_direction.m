@@ -1,17 +1,6 @@
 %% [R2-10] R2_10_bias_direction.m
 %  Checks whether the constraint bias cancelling the integration drift is coincidental or structural.
-%
-%  (1) the per-axis direction of the drift at impact of the uncorrected IMU integration trajectory,
-%      and whether that sign is consistent across participants.
-%  (2) the per-axis direction of the D_Vision bias and whether its sign is consistent.
-%  (3) whether the reference value plus that bias alone beats the motion capture D condition, per participant.
-%      how many of the 10 participants improve tells whether it is coincidental.
-%
-%  Target : 99 trials of the driver test set
 %  Output : revision/results/R2_10_bias_direction.csv
-%
-%  2026-09-06
-%% ========================================================================
 
 clc; clear; close all;
 thisDir = fileparts(mfilename('fullpath'));
@@ -35,11 +24,9 @@ for k = 1:n
     if isempty(r) || any(~isfinite(ref(r,:))), continue; end
     subj(k) = st.subj;
 
-    % (1) uncorrected drift : how far the integrated trajectory deviates from the reference value at impact relative to address
     dImu = st.imu_trajCal(st.imp,:) - st.imu_trajCal(st.add,:);
     drift(k,:) = (dImu - ref(r,:)) / 10;          % cm
 
-    % (3) downswing error of the reference condition and of the reference+bias condition
     T1 = local_correct(st.imu_trajCal, ref(r,:),        st.add, st.imp, st.fin);
     T2 = local_correct(st.imu_trajCal, ref(r,:) + bVid, st.add, st.imp, st.fin);
     i0 = st.bst; i1 = st.imp;
@@ -49,7 +36,7 @@ end
 
 u = unique(subj(isfinite(subj)));
 
-%% ===== (1) drift direction =====
+%% (1) drift direction
 fprintf([NL 'Uncorrected integration drift (impact, mean of participant means ± SD, cm)' NL]);
 for d = 1:3
     v = arrayfun(@(x) mean(drift(subj==x,d),'omitnan'), u);
@@ -57,7 +44,7 @@ for d = 1:3
             axName{d}, mean(v), std(v), max(sum(v>0), sum(v<0)), numel(u), NL);
 end
 
-%% ===== (2) bias direction =====
+%% (2) bias direction
 fprintf([NL 'D~Vision~ bias (mean of participant means ± SD, cm)' NL]);
 for d = 1:3
     e = (vid(:,d) - ref(:,d)) / 10;
@@ -66,7 +53,7 @@ for d = 1:3
             axName{d}, mean(v), std(v), max(sum(v>0), sum(v<0)), numel(u), NL);
 end
 
-%% ===== (3) is the bias beneficial =====
+%% (3) is the bias beneficial
 a = arrayfun(@(x) mean(eRef(subj==x),'omitnan'),  u);
 b = arrayfun(@(x) mean(eBias(subj==x),'omitnan'), u);
 [~, p, ~, st_] = ttest(a, b);

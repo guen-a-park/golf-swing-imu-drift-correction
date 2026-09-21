@@ -1,31 +1,6 @@
 %% [R2-1] R2_01_video_fps_downsampling.m
-%  Response to Reviewer 2, Comment R2-1
-%  ------------------------------------------------------------------------
-%  Comment: "what is the minimum sampling frequency of the 2D video?" / D_Vision is not an independent ground
-%        truth but an estimated training target, so its uncertainty must be quantified.
-%
-%  Computation
-%    the 2D wrist pixel trajectory measured at 150 fps is downsampled to 120 / 90 / 60 fps,
-%    interpolated linearly back to 200 Hz as in the pipeline, and at the ADD and IMP instants
-%      (1) the 3D wrist position estimation error (against the 150 fps baseline, and against motion capture)
-%      (2) the error of the constraint D_Vision
-%      (3) the effect of that D error on the BiLSTM training target (= the trajectory corrected with D_Vision)
-%    are reported, giving a practical minimum frame rate recommendation.
-%
-%  the D -> trajectory propagation uses the same closed form as R2-2.
-%    X_corr(t) = X_IMU(t) - w(t)*(X_IMU(t_IMP) - D),  w = (t-t_ADD)/(t_IMP-t_ADD)
-%    => error of the training target trajectory = w(t) * dD  (dD itself at impact)
-%
-%  Note: g.dl is already a signal linearly interpolated from 150 fps to 200 Hz. The "150 fps"
-%        here is therefore the baseline, and 120/90/60 are relative comparisons obtained by
-%        downsampling further on top of it. It should be read as a lower bound on the absolute frame rate effect.
-%
+%  Effect of the video frame rate on the video-based reconstruction.
 %  Output : revision/results/R2_01_fps_downsampling.csv
-%         revision/results/R2_01_fps_summary.csv
-%         revision/results/fig_R2_01_fps.png/.svg
-%
-%  2026-08-28
-%% ========================================================================
 
 clc; clear; close all;
 set(groot, 'defaultAxesFontSize', 12);
@@ -36,7 +11,7 @@ baseDir = fileparts(thisDir);
 OUT_DIR = fullfile(thisDir, 'results');
 if ~isfolder(OUT_DIR), mkdir(OUT_DIR); end
 
-%% ===== settings =====
+%% settings
 subjN = ["S01","S02","S03","S04","S05","S06","S07","S08","S09","S10"];
 CLUB  = 1;                       % driver
 TRIALS = 1:30;
@@ -45,7 +20,7 @@ fs = 200;                        % sampling rate of the stored signal
 
 EXCLUDED = [2 1 10; 6 1 3; 8 1 30];
 
-%% ===== camera parameters (same as clublength_3d_1020.m) =====
+%% camera parameters (same as clublength_3d_1020.m)
 fx = 1195.360; fy = 1190.848; cx = 732.411; cy = 531.828;
 
 R2w_0819 = [-0.00993943 -0.04524376 -0.99892653;
@@ -71,11 +46,11 @@ T_CAM = [1944.24195587, -147.53836065, 1065.52214668;
 
 club_length = [1135 1125 1100 1120 1107 1125 1087 1130 1125 1102];
 
-%% ===== data loading =====
+%% data loading
 fprintf('Loading swing data...\n');
 load(fullfile(baseDir, 'swingData_2508_aftercal_imp+1_est.mat'), 'swingData_2508');
 
-%% ===== trial loop =====
+%% trial loop
 rows = {};
 chk = [];                                     % for verifying the baseline reproduction
 for subj = 1:10
@@ -98,7 +73,6 @@ for subj = 1:10
         n  = size(px, 1);
         t0 = (0:n-1)' / fs;
 
-        % motion capture reference value
         WristU = g.marker(:,13:15); WristL = g.marker(:,7:9);
         abs_wrist = (WristU + WristL) ./ 2;
         Pref_add = abs_wrist(add,:)'; Pref_imp = abs_wrist(imp,:)';
@@ -118,7 +92,6 @@ for subj = 1:10
             P{fi,2} = local_reconstruct(pxf(imp,:), R2w, Tw, L, fx, fy, cx, cy);
         end
 
-        % check that the baseline (150 fps) reproduces the stored add_est/imp_est
         if all(isfinite(g.add_est))
             chk(end+1,:) = [norm(P{1,1}' - g.add_est), norm(P{1,2}' - g.imp_est)]; %#ok<SAGROW>
         end
@@ -146,7 +119,7 @@ if ~isempty(chk)
         mean(chk(:,1)), mean(chk(:,2)));
 end
 
-%% ===== summary (participant-level aggregation) =====
+%% summary (participant-level aggregation)
 subjList = unique(R.subj);
 srows = {};
 for fi = 1:numel(FPS_LIST)
@@ -171,7 +144,7 @@ S = cell2table(srows, 'VariableNames', {'fps', ...
     'errD_vs_mocap_mean','errD_vs_mocap_sd'});
 writetable(S, fullfile(OUT_DIR, 'R2_01_fps_summary.csv'));
 
-%% ===== console output =====
+%% console output
 fprintf('\n========== [R2-1] effect of video frame rate downsampling (cm) ==========\n');
 fprintf('driver %d trials / %d subjects, participant-level aggregation\n\n', height(R)/numel(FPS_LIST), numel(subjList));
 fprintf('%6s | %-26s | %-26s\n', 'fps', 'vs 150 fps baseline', 'vs motion capture');
@@ -182,7 +155,6 @@ for r = 1:height(S)
         S.errADD_vs_mocap_mean(r), S.errIMP_vs_mocap_mean(r), S.errD_vs_mocap_mean(r));
 end
 
-% propagation into the training target (corrected trajectory) : dD itself at impact, downswing mean 0.91 x dD (R2-2)
 W_DOWN = 0.91;
 fprintf('\n--- propagation into the training target (D_Vision corrected trajectory) ---\n');
 fprintf('%6s %14s %18s %14s\n', 'fps', '|dD| (cm)', 'impact traj. error', 'downswing mean');
@@ -192,7 +164,7 @@ for r = 2:height(S)
 end
 fprintf('\nreference for comparison: current downswing trajectory error 15.13 cm, within-participant D variation σ_D = 1.04/1.33/0.75 cm\n');
 
-%% ===== figure =====
+%% figure
 figure('Color','w','Position',[100 100 900 340]);
 subplot(1,2,1); hold on; grid on;
 errorbar(S.fps, S.errD_vs150_mean, S.errD_vs150_sd, '-o', 'LineWidth', 1.5, 'Color', [0.5 0 0.13]);
@@ -211,10 +183,8 @@ saveas(gcf, fullfile(OUT_DIR, 'fig_R2_01_fps.svg'));
 fprintf('\nsaved: %s\n', fullfile(OUT_DIR, 'R2_01_fps_summary.csv'));
 fprintf('saved: %s\n', fullfile(OUT_DIR, 'fig_R2_01_fps.png'));
 
-
-%% ===== local functions =====
+%% local functions
 function Xw = local_reconstruct(pix, R2w, Tw, L, fx, fy, cx, cy)
-% pixel -> camera ray -> world ray -> intersection with the sphere of radius L (larger root)
     u = pix(1); v = pix(2);
     rc = [(u - cx)/fx; (v - cy)/fy; 1];
     rw = R2w * rc;

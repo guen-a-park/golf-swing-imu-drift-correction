@@ -1,18 +1,6 @@
 %% [R2-10 / R2-11] R2_11_agreement_within.m
 %  recomputes the agreement-rate correlation of Figure 6D while respecting the repeated measures structure.
-%
-%  the manuscript pooled all participants and trials and reported R = 0.86. This has the same structure as
-%  the issue raised about the constraint estimate in [A10], so the per-trial agreement rate is recomputed
-%  and both the pooled correlation and the within-participant correlation are calculated.
-%
-%  agreement rate : the proportion of fast swing trajectory points that fall inside the mean +/- 2 SD band of the preferred swing.
-%           averaged over the X, Y, Z axes. As in the manuscript, the interval from -1.4 s relative to impact up to impact.
-%
-%  Run first : R2_11_draw_figure5_copy.m  (results/R2_11_trajectory_store.mat)
 %  Output    : revision/results/R2_11_agreement_within.csv
-%
-%  2026-09-05
-%% ========================================================================
 
 clc; clear; close all;
 thisDir = fileparts(mfilename('fullpath'));
@@ -36,7 +24,6 @@ for s = 1:numel(R2_11_store)
     imp = round(mean(double(st.imp)));
     idx = max(1, imp + WIN(1)) : min(size(ref,1), imp + WIN(2));
 
-    % build the per-axis band from the preferred swing (for the reference and for the estimate separately)
     mRef = mean(ref (idx,:,:), 3);  sRef = std(ref (idx,:,:), 0, 3);
     mEst = mean(prop(idx,:,:), 3);  sEst = std(prop(idx,:,:), 0, 3);
 
@@ -53,12 +40,12 @@ for s = 1:numel(R2_11_store)
     end
 end
 
-%% ===== pooled correlation =====
+%% pooled correlation
 [Rp, Pp] = corr(agrRef, agrEst);
 fprintf([NL 'pooled correlation (%d trials, %d participants)' NL], numel(subj), numel(unique(subj)));
 fprintf('  R = %.2f, p = %.4g%s', Rp, Pp, NL);
 
-%% ===== within-participant correlation (correlation after subtracting each participant's mean) =====
+%% within-participant correlation (correlation after subtracting each participant's mean)
 u = unique(subj);
 cRef = agrRef; cEst = agrEst;
 for k = 1:numel(u)
@@ -73,14 +60,14 @@ Pw = 2 * (1 - tcdf(abs(tw), df));
 fprintf([NL 'within-participant correlation (repeated measures correlation)' NL]);
 fprintf('  R = %.2f, p = %.4g, df = %d%s', Rw, Pw, df, NL);
 
-%% ===== correlation between participant means (between-participant component) =====
+%% correlation between participant means (between-participant component)
 mRefS = arrayfun(@(x) mean(agrRef(subj==x)), u);
 mEstS = arrayfun(@(x) mean(agrEst(subj==x)), u);
 [Rb, Pb] = corr(mRefS, mEstS);
 fprintf([NL 'between-participant correlation (%d participant means)' NL], numel(u));
 fprintf('  R = %.2f, p = %.4g%s', Rb, Pb, NL);
 
-%% ===== save =====
+%% save
 T = table(subj, agrRef, agrEst, 'VariableNames', {'subj','agree_mocap','agree_est'});
 writetable(T, fullfile(OUT, 'R2_11_agreement_within.csv'));
 S = table({'pooled';'within';'between'}, [Rp;Rw;Rb], [Pp;Pw;Pb], ...

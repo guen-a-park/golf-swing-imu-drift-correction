@@ -1,17 +1,9 @@
 function [ml_est, ml_traj_est] = load_ml_data(mldataDir, clubs_ml, nRows_ml, nCols_ml, nTrials, nSubj_ml, subj_list)
-% LOAD_ML_DATA  load ML prediction data from a folder
-%   mldataDir: data folder path
-%   clubs_ml: cell array of club names {'driver','iron','fast'}
-%   nRows_ml, nCols_ml: size of ml_est
-%   nTrials: number of trials
-%   nSubj_ml: total number of participants
-%   subj_list: list of participants to load (empty array means all)
 
     if isempty(subj_list)
         subj_list = 1:nSubj_ml;
     end
     
-    % initialise
     ml_est = struct();
     for c = 1:numel(clubs_ml)
         ml_est.(clubs_ml{c}) = nan(nRows_ml, nCols_ml, nSubj_ml);

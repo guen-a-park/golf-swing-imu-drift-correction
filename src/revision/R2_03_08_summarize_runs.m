@@ -1,21 +1,6 @@
 %% [R2-3 / R2-8] R2_03_08_summarize_runs.m
 %  Aggregates the results of the training runs.
-%  ------------------------------------------------------------------------
-%  R2-3 : performance curve by number of calibration swings N = 3/5/10/20 (distribution over 5 seeds)
-%  R2-8 : ori7 (magnetometer heading) vs ori8 (motion capture heading alignment) comparison
-%         Both conditions use N = 20 and 5 seeds so that the protocol matches.
-%
-%  Metric: constraint D estimation error = |D_Infer - D_Vision| (mm)
-%        the L2_err column of each run's subj*_driver_test_est.csv
-%        aggregated as per-participant mean -> mean across participants (reflecting the repeated-measures structure, R2-10)
-%
-%  Prerequisite: multimodal/runs_R2_03_calib{N}_seed{S}, runs_R2_08_ori8_seed{S}
 %  Output: revision/results/R2_03_calibration_curve.csv
-%        revision/results/R2_08_orientation_condition.csv
-%        revision/results/fig_R2_03_calibration_curve.png/.svg
-%
-%  2026-08-28
-%% ========================================================================
 
 clc; clear; close all;
 set(groot, 'defaultAxesFontSize', 12);
@@ -29,7 +14,7 @@ ML_DIR = fullfile(fileparts(fileparts(fileparts(thisDir))), 'multimodal');
 NCALIB = [3 5 10 20];
 SEEDS  = 1:5;
 
-%% ===== R2-3 : calibration swing count curve =====
+%% R2-3 : calibration swing count curve
 rows = {}; box_v = []; box_g = [];
 for ni = 1:numel(NCALIB)
     n = NCALIB(ni);
@@ -53,7 +38,7 @@ for ni = 1:numel(NCALIB)
         mean(v), std(v), min(v), max(v), median(v));
 end
 
-%% ===== R2-8 : orientation condition comparison =====
+%% R2-8 : orientation condition comparison
 rows8 = {};
 for s = SEEDS
     d7 = fullfile(ML_DIR, sprintf('runs_R2_03_calib20_seed%d', s));   % ori7, N=20
@@ -80,7 +65,7 @@ if numel(v7) >= 2 && numel(v8) >= 2
         'mean', mean(v7), std(v7), mean(v8), std(v8), mean(v8-v7), p);
 end
 
-%% ===== figure : R2-3 curve =====
+%% figure : R2-3 curve
 if ~isempty(box_v)
     figure('Color','w','Position',[100 100 560 360]); hold on; grid on;
     boxplot(box_v, box_g, 'Colors', [0.5 0 0.13], 'Symbol', 'o');
@@ -94,10 +79,8 @@ end
 fprintf('\nsaved: %s\n', fullfile(OUT_DIR, 'R2_03_calibration_curve.csv'));
 fprintf('saved: %s\n', fullfile(OUT_DIR, 'R2_08_orientation_condition.csv'));
 
-
-%% ===== local functions =====
+%% local functions
 function [mD, mLoss] = local_run_metrics(runDir)
-% aggregate the D error of the driver test as per-participant mean -> mean across participants
     mD = NaN; mLoss = NaN;
     if ~isfolder(runDir), return; end
     f = dir(fullfile(runDir, 'subj*_driver_test_est.csv'));

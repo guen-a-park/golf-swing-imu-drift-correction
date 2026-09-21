@@ -1,14 +1,6 @@
 %% [R2-7] R2_07_filter_verify.m
 %  verification version of the complementary filter comparison.
-%    (1) Kp = 0 control : whether the filter becomes exactly the same as gyro integration
-%    (2) both signs of the feedback cross product
-%    (3) including the gyro bias estimation term (Ki)
-%
-%  Run first : R2_07_orifilter_store.m
 %  Output    : revision/results/R2_07_filter_verify.csv
-%
-%  2026-09-04
-%% ========================================================================
 
 clc; clear; close all;
 
@@ -25,7 +17,6 @@ GRAV = 9.81; ACCT = 0.10;
 SEG  = {'Backswing','add','bst'; 'Downswing','bst','imp'; ...
         'FollowThrough','imp','fin'; 'EntireSwing','add','fin'};
 
-% {label, Kp, Ki, sign}  sign +1 : vMeas x vHat,  -1 : vHat x vMeas
 COND = { ...
     'Kp=0 (control)',         0.0,  0.0,  +1; ...
     'Kp=0.5 sign +',          0.5,  0.0,  +1; ...
@@ -64,7 +55,7 @@ for k = 1:n
     end
 end
 
-%% ===== output =====
+%% output
 NL = char(10);
 fprintf([NL '===== [R2-7] complementary filter verification (deg) =====' NL]);
 fprintf(['(1) maximum angle difference between the Kp=0 condition and the manuscript orientation : %.4f deg (should be 0)' NL NL], ...
@@ -90,7 +81,7 @@ T = cell2table(vertcat(rows{:}), 'VariableNames', ...
 writetable(T, fullfile(RES, 'R2_07_filter_verify.csv'));
 fprintf([NL 'saved: results/R2_07_filter_verify.csv' NL]);
 
-%% ===== helper functions =====
+%% helper functions
 function e = local_angle_error(Ra, Rb)
     N = size(Ra,3); e = nan(N,1);
     for t = 1:N
