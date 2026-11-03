@@ -8,13 +8,13 @@ constraint** — the wrist displacement between address and impact — which is 
 once per person from monocular video during a calibration session and thereafter
 inferred from the IMU signals alone.
 
-| symbol | meaning |
-|---|---|
-| `D_Vision` | displacement reconstructed from the monocular video (calibration only) |
-| `D_Train`  | the same quantity read back from the model output during training |
-| `D_Infer`  | the quantity inferred from the IMU signals at inference — the one used for correction |
+| symbol in the manuscript | name in the code | meaning |
+|---|---|---|
+| `d_video` | `D_Vision`, `Dvid` | displacement reconstructed from the monocular video (calibration only) |
+| `d_IMU`   | `D_Infer`, `Dml`   | displacement taken at impact from the trajectory that the BiLSTM predicts from the IMU signals — the one used for correction |
+| `d_mocap` | `Dref`             | displacement measured by motion capture (reference) |
 
-All three are a single 3D constant vector per trial, not a time-varying trajectory.
+Each is a single 3D vector per trial, not a time-varying trajectory.
 
 ## Layout
 
@@ -22,10 +22,11 @@ All three are a single 3D constant vector per trial, not a time-varying trajecto
 src/video/      monocular video → 3D wrist position → D_Vision
 src/imu/        IMU preprocessing, orientation estimation, velocity and
                 displacement correction, trajectory reconstruction
-src/model/      BiLSTM that infers D_Infer from the IMU signals (PyTorch)
+src/model/      BiLSTM that predicts the wrist trajectory from the IMU signals,
+                from which D_Infer is taken at impact (PyTorch)
 src/figures/    scripts that produce the manuscript figures
 src/revision/   analyses added during peer review (prefixed R2_ / R3_ by
-                reviewer and comment number)
+                reviewer and comment number, R2r2_ for the second round)
 lib/            shared MATLAB helpers (quaternion algebra, filtering, geometry)
 ```
 
@@ -64,7 +65,9 @@ not executed.
    address and at impact by intersecting the camera ray with a sphere of radius
    equal to the club length centred on the ball, and returns `D_Vision`.
 3. **`src/model/traj_ml_withtraj_matrevised_3d_1216.py`** — trains the BiLSTM on
-   the calibration swings and infers `D_Infer`. `traj_ml_loso_0224.py` runs the
+   the calibration swings, with the trajectories corrected by `D_Vision` as
+   labels, and takes `D_Infer` from the predicted trajectory at impact.
+   `traj_ml_loso_0224.py` runs the
    leave-one-subject-out condition.
 4. **`src/imu/swing1127_withml_3d_0304.m`** — estimates orientation, applies the
    approximate zero-velocity correction at address, top of backswing and finish,

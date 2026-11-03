@@ -18,13 +18,13 @@ SEG = {'Backswing','add','bst'; 'Downswing','bst','imp'; ...
 DSET = {'MocapD','Dref'; 'VideoD','Dvid'; 'InferD','Dml'};
 
 ML_DIR = fullfile(fileparts(fileparts(fileparts(thisDir))), 'multimodal');
-Dml = local_load_Dml(fullfile(ML_DIR, 'runs_R2_03_calib20_seed3'));
+Dml = local_load_Dml(fullfile(ML_DIR, 'runs_0112_accgyro_400800_ori7traj2'));
 if isempty(Dml), error('D_Infer run folder not found.'); end
 
 n = numel(S);
 sj = nan(n,1);
 nD = size(DSET,1);
-eZ = nan(n,4,nD); eMv = nan(n,4,nD);   % (trial, segment, D type)
+eZ = nan(n,4,nD); eMv = nan(n,4,nD);
 iZ = nan(n,nD);  iMv = nan(n,nD);
 shiftDS = nan(n,1);
 nZ = nan(n,4); nMv = nan(n,4); nZi = nan(n,1); nMvi = nan(n,1);
@@ -35,7 +35,7 @@ for k = 1:n
     if isempty(r), continue; end
 
     add = st.add; bst = st.bst; imp = st.imp; fin = st.fin;
-    vmBST = [r.vBST_x(1) r.vBST_y(1) r.vBST_z(1)];      % mm/s
+    vmBST = [r.vBST_x(1) r.vBST_y(1) r.vBST_z(1)];
     vmFIN = [r.vFIN_x(1) r.vFIN_y(1) r.vFIN_z(1)];
 
     nS = size(st.imu_trajCal, 1);
@@ -46,10 +46,10 @@ for k = 1:n
     d(i2,:) = -vmBST + w2 .* (vmBST - vmFIN);
 
     dx = cumtrapz(ts, d);
-    dx = dx - dx(add,:);                                % mm
+    dx = dx - dx(add,:);
 
-    trajZ  = st.imu_trajCal;                            % zero-velocity anchor (proposed method)
-    trajMv = st.imu_trajCal - dx;                       % measured-velocity anchor (counterfactual)
+    trajZ  = st.imu_trajCal;
+    trajMv = st.imu_trajCal - dx;
     shiftDS(k) = mean(vecnorm(dx(bst:imp,:), 2, 2))/10;
 
     for p = 1:4
@@ -79,7 +79,6 @@ for k = 1:n
     end
 end
 
-%% output
 fprintf('\n===== [R2-6c] per-segment trajectory error by anchor velocity target (cm) =====\n');
 fprintf('driver evaluation: %d trials / %d participants. participant-level mean\n', ...
     sum(isfinite(sj)), numel(unique(sj(isfinite(sj)))));
@@ -88,7 +87,7 @@ fprintf('downswing segment trajectory shift (difference between the two conditio
 NL = char(10);
 fprintf(['--- no displacement constraint ---' NL]);
 fprintf(['%-24s %10s %10s %10s %10s %10s' NL], 'anchor target', ...
-    'backswing','downswing','follow-through','total','impact');
+    'Backswing','Downswing','FollowThrough','EntireSwing','Impact');
 fprintf(['%-24s %10.1f %10.1f %10.1f %10.1f %10.1f' NL], '0 (approximate zero velocity)', ...
     arrayfun(@(p) local_agg(nZ(:,p), sj), 1:4), local_agg(nZi, sj));
 fprintf(['%-24s %10.1f %10.1f %10.1f %10.1f %10.1f' NL NL], 'measured velocity', ...
@@ -98,7 +97,7 @@ rows = {};
 for q = 1:nD
     fprintf('--- constraint = %s ---\n', DSET{q,1});
     fprintf('%-24s %10s %10s %10s %10s %10s\n', 'anchor target', ...
-        'backswing', 'downswing', 'follow-through', 'total', 'impact');
+        'Backswing', 'Downswing', 'FollowThrough', 'EntireSwing', 'Impact');
     vZ  = arrayfun(@(p) local_agg(eZ(:,p,q),  sj), 1:4);
     vMv = arrayfun(@(p) local_agg(eMv(:,p,q), sj), 1:4);
     fprintf('%-24s %10.1f %10.1f %10.1f %10.1f %10.1f\n', '0 (approximate zero velocity)', ...
@@ -107,8 +106,8 @@ for q = 1:nD
         vMv, local_agg(iMv(:,q), sj));
     fprintf('%-24s %10.1f %10.1f %10.1f %10.1f %10.1f\n\n', 'difference (measured - zero)', ...
         vMv - vZ, local_agg(iMv(:,q), sj) - local_agg(iZ(:,q), sj));
-    rows = [rows; {DSET{q,1}, '0 (approximate zero velocity)', vZ(1), vZ(2), vZ(3), vZ(4), local_agg(iZ(:,q),sj)}]; %#ok<AGROW>
-    rows = [rows; {DSET{q,1}, 'measured velocity',        vMv(1), vMv(2), vMv(3), vMv(4), local_agg(iMv(:,q),sj)}]; %#ok<AGROW>
+    rows = [rows; {DSET{q,1}, '0 (approximate zero velocity)', vZ(1), vZ(2), vZ(3), vZ(4), local_agg(iZ(:,q),sj)}];
+    rows = [rows; {DSET{q,1}, 'measured velocity',        vMv(1), vMv(2), vMv(3), vMv(4), local_agg(iMv(:,q),sj)}];
 end
 
 writetable(cell2table(rows, 'VariableNames', ...
@@ -116,7 +115,6 @@ writetable(cell2table(rows, 'VariableNames', ...
     fullfile(RES, 'R2_06c_velocity_anchor_conditions.csv'));
 fprintf('saved: results/R2_06c_velocity_anchor_conditions.csv\n');
 
-%% helper functions
 function traj = local_correct(traj0, D, add, imp, fin)
     traj = traj0;
     dm = traj0(imp,:) - D;

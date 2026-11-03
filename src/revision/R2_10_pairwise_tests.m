@@ -25,7 +25,6 @@ for k = 1:n
 end
 rows = {};
 
-%% (1) [A2] constant club length vs measured distance
 fprintf([NL '===== (1) [A2] constant club length vs measured distance =====' NL]);
 eC = nan(n,1); eT = nan(n,1); tC = nan(n,4); tT = nan(n,4);
 for k = 1:n
@@ -45,10 +44,9 @@ for k = 1:n
 end
 for q = 1:4
     rows = [rows; local_pair(sprintf('[A2] video D vs mocap D, %s', SEG{q,1}), ...
-        tC(:,q), tT(:,q), sj, true(n,1))]; %#ok<AGROW>
+        tC(:,q), tT(:,q), sj, true(n,1))];
 end
 
-%% (2) [A6] velocity anchor
 fprintf([NL '===== (2) [A6] velocity anchor target 0 vs measured velocity =====' NL]);
 Dml = local_load_Dml(fullfile(ML, 'runs_0112_accgyro_400800_ori7traj2'));
 eZ = nan(n,4); eV = nan(n,4); fs = 200; ts = 1/fs;
@@ -74,46 +72,36 @@ for k = 1:n
 end
 for q = 1:4
     rows = [rows; local_pair(sprintf('[A6] zero velocity vs measured velocity, %s', SEG{q,1}), ...
-        eZ(:,q), eV(:,q), sj, true(n,1))]; %#ok<AGROW>
+        eZ(:,q), eV(:,q), sj, true(n,1))];
 end
 
-%% (3) [A8] heading alignment
 fprintf([NL '===== (3) [A8] magnetometer heading vs aligned heading =====' NL]);
 O7 = readtable(fullfile(RES, 'orientation_saturation_trialwise.csv'));
 O8 = readtable(fullfile(RES, 'R2_08_ori8_trialwise.csv'));
 ocol = {'errBackswing','errDownswing','errFollowThrough','errEntireSwing'};
 for q = 1:4
     rows = [rows; local_pair(sprintf('[A8] orientation error %s (deg)', SEG{q,1}), ...
-        O7.(ocol{q}), O8.(ocol{q}), O7.subj, true(height(O7),1))]; %#ok<AGROW>
-end
-E7 = local_seg(fullfile(RES, 'R2_08_traj_error_seg_ori7_seed3.csv'), SEG);
-E8 = local_seg(fullfile(RES, 'R2_08_traj_error_seg_ori8_seed3.csv'), SEG);
-for q = 1:4
-    rows = [rows; local_pair(sprintf('[A8] trajectory error %s', SEG{q,1}), ...
-        E7(:,q), E8(:,q), (1:10)', true(10,1))]; %#ok<AGROW>
+        O7.(ocol{q}), O8.(ocol{q}), O7.subj, true(height(O7),1))];
 end
 
-%% (4) [A9] saturation excluded
 fprintf([NL '===== (4) [A9] saturation included vs excluded =====' NL]);
 both = [];
 for su = unique(O7.subj)'
     if any(O7.isSaturated(O7.subj==su)) && any(~O7.isSaturated(O7.subj==su))
-        both(end+1) = su; %#ok<AGROW>
+        both(end+1) = su;
     end
 end
 fprintf(['participants having both saturated and non-saturated: %s' NL], mat2str(both));
 for q = 1:4
     a = arrayfun(@(s) mean(O7.(ocol{q})(O7.subj==s & ~O7.isSaturated)), both)';
     b = arrayfun(@(s) mean(O7.(ocol{q})(O7.subj==s &  O7.isSaturated)), both)';
-    rows = [rows; local_pair2(sprintf('[A9] orientation error %s (deg), non-saturated vs saturated', SEG{q,1}), a, b)]; %#ok<AGROW>
+    rows = [rows; local_pair2(sprintf('[A9] orientation error %s (deg), non-saturated vs saturated', SEG{q,1}), a, b)];
 end
 
-%% save
 T = cell2table(rows, 'VariableNames', {'comparison','n','mean1','mean2','diff','t','p'});
 writetable(T, fullfile(RES, 'R2_10_pairwise_tests.csv'));
 fprintf([NL 'saved: results/R2_10_pairwise_tests.csv' NL]);
 
-%% helper functions
 function traj = local_correct(traj0, D, add, imp, fin)
     traj = traj0; dm = traj0(imp,:) - D;
     for kk = add:fin
