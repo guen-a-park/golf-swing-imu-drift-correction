@@ -1,7 +1,7 @@
 {
   "upload_type": "software",
   "title": "Personalized kinematic constraint-based drift correction for 3D golf swing trajectory monitoring with a wrist-worn IMU",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "creators": [
     {
       "name": "Park, Guen-a",

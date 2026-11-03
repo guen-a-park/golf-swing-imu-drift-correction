@@ -6,8 +6,8 @@ authors:
     given-names: Guen-a
     affiliation: "Korea Advanced Institute of Science and Technology"
 license: MIT
-version: "1.0.0"
-date-released: "2026-09-21"
+version: "1.1.0"
+date-released: "2026-11-03"
 repository-code: "https://github.com/guen-a-park/golf-swing-imu-drift-correction"
 abstract: >-
   MATLAB and Python code for reconstructing the three-dimensional wrist
